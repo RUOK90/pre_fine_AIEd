@@ -1,0 +1,1 @@
+The parser cannot handle trailing whitespace or lack of final newline, my apologies.

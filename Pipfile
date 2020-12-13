@@ -1,0 +1,25 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+black = {editable = true, git = "https://github.com/psf/black.git", ref = "master"}
+pipenv = "*"
+pre-commit = "*"
+pylint = "*"
+
+[packages]
+numpy = "*"
+scipy = "*"
+sklearn = "*"
+torch = "*"
+tensorboard = "*"
+tqdm = "*"
+transformers = "2.11.0"
+wandb = "*"
+pandas = "*"
+dill = "*"
+
+[requires]
+python_version = "3.7"
