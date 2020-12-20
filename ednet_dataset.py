@@ -11,6 +11,9 @@ def get_dataloaders(q_info_dic, pretrain_base_path):
     user_window_path = f"{pretrain_base_path}/ednet_sample_list_50.pkl"
     with open(user_window_path, "rb") as f_r:
         train_user_windows, val_user_windows, test_user_windows = pkl.load(f_r)
+        train_user_windows = np.array(train_user_windows)
+        val_user_windows = np.array(val_user_windows)
+        test_user_windows = np.array(test_user_windows)
 
     train_user_inter_path = f"{pretrain_base_path}/ednet_train_sequences.pkl"
     train_dataset = EdNetDataSet(q_info_dic, train_user_inter_path, train_user_windows)
@@ -72,6 +75,22 @@ def get_user_data(user_inter_path):
         uid2inters[uid] = np.array(inters)
 
     return uid2inters
+
+    # uid2idx = []
+    # inters = []
+    # next_user_start_idx = 0
+    # for uid, user_inters in uid2inters.items():
+    #     user_inters = np.swapaxes(np.array(user_inters), 0, 1)
+    #     user_start_idx = next_user_start_idx
+    #     user_end_idx = next_user_start_idx + len(user_inters)
+    #     uid2idx.append([uid, user_start_idx, user_end_idx])
+    #     inters.append(user_inters)
+    #     next_user_start_idx = user_end_idx
+    #
+    # uid2idx = np.array(uid2idx)
+    # inters = np.vstack(inters)
+    #
+    # return np.array(uid2idx), np.array(inters)
 
 
 def preprocess_inters(inters, window_idx):
