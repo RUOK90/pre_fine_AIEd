@@ -68,6 +68,9 @@ def get_user_data(user_inter_path):
     with open(user_inter_path, "rb") as f_r:
         uid2inters = pkl.load(f_r)
 
+    for uid, inters in uid2inters.items():
+        uid2inters[uid] = np.array(inters)
+
     return uid2inters
 
 

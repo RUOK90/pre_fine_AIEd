@@ -1,5 +1,6 @@
 import csv
 import torch
+import numpy as np
 from torch.utils import data
 from datetime import datetime
 
@@ -13,13 +14,13 @@ def get_dataloaders(q_info_dic, score_base_path):
         print(f"processing score data split {cross_num}")
         train_user_path = f"{score_base_path}/{ARGS.num_cross_folds}fold/train_user_list_{cross_num}.csv"
         with open(train_user_path, "r") as f_r:
-            train_user_id_list = [line[0] for line in csv.reader(f_r)]
+            train_user_id_list = np.array([line[0] for line in csv.reader(f_r)])
         val_user_path = f"{score_base_path}/{ARGS.num_cross_folds}fold/validation_user_list_{cross_num}.csv"
         with open(val_user_path, "r") as f_r:
-            val_user_id_list = [line[0] for line in csv.reader(f_r)]
+            val_user_id_list = np.array([line[0] for line in csv.reader(f_r)])
         test_user_path = f"{score_base_path}/{ARGS.num_cross_folds}fold/test_user_list_{cross_num}.csv"
         with open(test_user_path, "r") as f_r:
-            test_user_id_list = [line[0] for line in csv.reader(f_r)]
+            test_user_id_list = np.array([line[0] for line in csv.reader(f_r)])
 
         print(
             f"# train_users: {len(train_user_id_list)}, # val_users: {len(val_user_id_list)}, # test_users: {len(test_user_id_list)}"
@@ -154,12 +155,12 @@ def get_user_data(q_info_dic, user_inter_path, user_id_list):
             lag_time_list.append(lag_time)
 
         uid2inters[user_id] = {
-            "qid": qid_list,
-            "part": part_list,
-            "is_correct": is_correct_list,
-            "is_on_time": is_on_time_list,
-            "elapsed_time": elapsed_time_list,
-            "lag_time": lag_time_list,
+            "qid": np.array(qid_list),
+            "part": np.array(part_list),
+            "is_correct": np.array(is_correct_list),
+            "is_on_time": np.array(is_on_time_list),
+            "elapsed_time": np.array(elapsed_time_list),
+            "lag_time": np.array(lag_time_list),
         }
 
     return uid2inters, uid2scores

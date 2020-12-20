@@ -222,6 +222,10 @@ def get_args():
         args.num_cross_folds = 1
         args.score_base_path = "/private/datasets/LAK21_AM/score_data_debug/14d_10q"
         args.pretrain_base_path = "/private/datasets/LAK21_AM/load_debug"
+        args.train_batch_size = 4
+        args.test_batch_size = 4
+        args.num_pretrain_epochs = 10
+        args.num_finetune_epochs = 10
 
     # wandb
     if args.use_wandb:
