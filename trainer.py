@@ -19,12 +19,19 @@ class Trainer:
 
         self._mse_loss = nn.MSELoss(reduction="mean")
         self._bce_loss = nn.BCEWithLogitsLoss(reduction="mean")
+        self._l1_loss = nn.L1Loss(reduction="none")
         self._cur_epoch = 0
 
     def _pretrain(self, dataloader, mode):
         total_target_cnt = 0
         batch_results = {
-            target: {"loss": [], "n_corrects": 0, "sigmoid_output": [], "label": []}
+            target: {
+                "loss": [],
+                "n_corrects": 0,
+                "sigmoid_output": [],
+                "label": [],
+                "l1": [],
+            }
             for target in ARGS.gen_targets
         }
 
@@ -54,6 +61,9 @@ class Trainer:
                         sigmoid_output.detach().cpu().numpy()
                     )
                     batch_results[target]["label"].extend(label.detach().cpu().numpy())
+                elif target in ["elapsed_time", "lag_time"]:
+                    l1 = self._l1_loss(sigmoid_output, label)
+                    batch_results[target]["l1"].extend(l1.detach().cpu().numpy())
 
             if self._model.training:
                 self._optim.update(batch_total_loss)
@@ -72,6 +82,9 @@ class Trainer:
                     batch_results[target]["sigmoid_output"],
                 )
                 print(f"{mode} {target} acc: {acc:.4f}, auc: {auc:.4f}")
+            elif target in ["elapsed_time", "lag_time"]:
+                l1 = np.mean(batch_results[target]["l1"])
+                print(f"{mode} {target} l1: {l1:.4f}")
 
             if ARGS.use_wandb:
                 wandb_log_dict = {}
@@ -79,7 +92,9 @@ class Trainer:
                 if target in ["is_correct", "is_on_time"]:
                     wandb_log_dict[f"{mode} {target} acc"] = acc
                     wandb_log_dict[f"{mode} {target} auc"] = auc
-                    wandb.log(wandb_log_dict, step=self._cur_epoch)
+                elif target in ["elapsed_time", "lag_time"]:
+                    wandb_log_dict[f"{mode} {target} l1"] = l1
+                wandb.log(wandb_log_dict, step=self._cur_epoch)
 
     def _train(self):
         for epoch in range(ARGS.num_pretrain_epochs):
