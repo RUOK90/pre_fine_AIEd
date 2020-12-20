@@ -50,7 +50,7 @@ def get_arg_parser():
     base_args = parser.add_argument_group("Base args")
     base_args.add_argument("--run_script")
     base_args.add_argument("--debug_mode", type=str2bool, default=True)
-    base_args.add_argument("--gpu", type=str, default="4")
+    base_args.add_argument("--gpu", type=str, default="7")
     base_args.add_argument("--device", type=str)
     base_args.add_argument("--num_workers", type=int, default=8)
 
@@ -87,15 +87,15 @@ def get_arg_parser():
     train_args.add_argument("--num_cross_folds", type=int, default=5)
     train_args.add_argument("--min_seq_size", type=int, default=10)
     train_args.add_argument("--max_seq_size", type=int, default=100)
-    train_args.add_argument("--train_batch_size", type=int, default=4)
-    train_args.add_argument("--test_batch_size", type=int, default=4)
+    train_args.add_argument("--train_batch_size", type=int, default=256)
+    train_args.add_argument("--test_batch_size", type=int, default=256)
     train_args.add_argument(
         "--optim", type=str, choices=["scheduled", "noam"], default="scheduled"
     )
     train_args.add_argument("--lr", type=float, default=0.001)
     train_args.add_argument("--warmup_steps", type=int, default=4000)
-    train_args.add_argument("--num_pretrain_epochs", type=int, default=10)
-    train_args.add_argument("--num_finetune_epochs", type=int, default=10)
+    train_args.add_argument("--num_pretrain_epochs", type=int, default=100)
+    train_args.add_argument("--num_finetune_epochs", type=int, default=100)
     train_args.add_argument("--random_mask_ratio", type=float, default=0.6)
     train_args.add_argument(
         "--aug_mode",
@@ -205,6 +205,7 @@ def get_args():
     if "lag_time" in args.gen_targets:
         args.wandb_name += "lt-"
     args.wandb_name = args.wandb_name.rstrip("-")
+    args.wandb_name += f"_{args.optim}_{args.aug_mode}"
 
     # parse tags
     args.wandb_tags = (
