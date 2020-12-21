@@ -43,11 +43,9 @@ class Trainer:
             batch_total_loss = 0
 
             for target, (output, sigmoid_output) in outputs.items():
-                label = batch["label"][target].masked_select(batch["input_mask"].bool())
-                output = output.masked_select(batch["input_mask"].bool())
-                sigmoid_output = sigmoid_output.masked_select(
-                    batch["input_mask"].bool()
-                )
+                label = batch["label"][target].masked_select(batch["input_mask"])
+                output = output.masked_select(batch["input_mask"])
+                sigmoid_output = sigmoid_output.masked_select(batch["input_mask"])
 
                 if target in ["is_correct", "is_on_time"]:
                     loss = self._bce_loss(output, label)
@@ -99,28 +97,32 @@ class Trainer:
                 wandb.log(wandb_log_dict, step=self._cur_epoch)
 
     def _train(self):
-        for epoch in range(ARGS.num_pretrain_epochs):
-            print(f"\nPretraining Epoch: {epoch:03d}")
-            self._cur_epoch = epoch
+        if ARGS.train_mode == "finetune_only":
+            self._finetune_trainer._train(None, 0)
+        elif ARGS.train_mode == "both" or ARGS.train_mode == "pretrain_only":
+            for epoch in range(ARGS.num_pretrain_epochs):
+                print(f"\nPretraining Epoch: {epoch:03d}")
+                self._cur_epoch = epoch
 
-            # set random seed
-            set_random_seed(ARGS.random_seed + epoch)
+                # set random seed
+                set_random_seed(ARGS.random_seed + epoch)
 
-            # pretrain train
-            self._model.train()
-            print(f"pretraining train")
-            self._pretrain(self._pretrain_dataloaders["train"], "train")
+                # pretrain train
+                self._model.train()
+                print(f"pretraining train")
+                self._pretrain(self._pretrain_dataloaders["train"], "train")
 
-            # pretrain val
-            print("pretraining validation")
-            with torch.no_grad():
-                self._model.eval()
-                self._pretrain(self._pretrain_dataloaders["val"], "val")
+                # pretrain val
+                print("pretraining validation")
+                with torch.no_grad():
+                    self._model.eval()
+                    self._pretrain(self._pretrain_dataloaders["val"], "val")
 
-            # save pretrained model
-            pretrained_weight_path = f"{ARGS.weight_path}/{epoch}.pt"
-            torch.save(self._model.state_dict(), pretrained_weight_path)
+                # save pretrained model
+                pretrained_weight_path = f"{ARGS.weight_path}/{epoch}.pt"
+                torch.save(self._model.state_dict(), pretrained_weight_path)
 
-            # fine tune
-            print(f"finetuning after the pretraining")
-            self._finetune_trainer._train(pretrained_weight_path, epoch)
+                if ARGS.train_mode == "both":
+                    # fine tune
+                    print(f"finetuning after the pretraining")
+                    self._finetune_trainer._train(pretrained_weight_path, epoch)

@@ -97,14 +97,20 @@ def get_arg_parser():
     train_args.add_argument("--num_pretrain_epochs", type=int, default=100)
     train_args.add_argument("--num_finetune_epochs", type=int, default=100)
     train_args.add_argument("--random_mask_ratio", type=float, default=0.6)
+    train_args.add_argument("--aug_ratio", type=float, default=0.5)
+    train_args.add_argument("--aug_sample_ratio", type=float, default=0.5)
     train_args.add_argument(
         "--aug_mode",
         type=str,
         choices=["no_aug", "aug_only", "both"],
         default="aug_only",
     )
-    train_args.add_argument("--aug_ratio", type=float, default=0.5)
-    train_args.add_argument("--aug_sample_ratio", type=float, default=0.5)
+    train_args.add_argument(
+        "--train_mode",
+        type=str,
+        choices=["pretrain_only", "finetune_only", "both"],
+        default="both",
+    )
     train_args.add_argument(
         "--gen_input_features",
         type=str,
@@ -173,39 +179,41 @@ def get_args():
     args.run_script = get_run_script()
 
     # name
-    # input_masked_target
-    args.wandb_name = ""
-    # input
-    if "is_correct" in args.gen_input_features:
-        args.wandb_name += "ic-"
-    if "is_on_time" in args.gen_input_features:
-        args.wandb_name += "iot-"
-    if "elapsed_time" in args.gen_input_features:
-        args.wandb_name += "et-"
-    if "lag_time" in args.gen_input_features:
-        args.wandb_name += "lt-"
-    args.wandb_name = args.wandb_name.rstrip("-") + "_"
-    # masked
-    if "is_correct" in args.gen_masked_features:
-        args.wandb_name += "ic-"
-    if "is_on_time" in args.gen_masked_features:
-        args.wandb_name += "iot-"
-    if "elapsed_time" in args.gen_masked_features:
-        args.wandb_name += "et-"
-    if "lag_time" in args.gen_masked_features:
-        args.wandb_name += "lt-"
-    args.wandb_name = args.wandb_name.rstrip("-") + "_"
-    # target
-    if "is_correct" in args.gen_targets:
-        args.wandb_name += "ic-"
-    if "is_on_time" in args.gen_targets:
-        args.wandb_name += "iot-"
-    if "elapsed_time" in args.gen_targets:
-        args.wandb_name += "et-"
-    if "lag_time" in args.gen_targets:
-        args.wandb_name += "lt-"
-    args.wandb_name = args.wandb_name.rstrip("-")
-    args.wandb_name += f"_{args.optim}_{args.aug_mode}"
+    # # input_masked_target
+    # args.wandb_name = ""
+    # # input
+    # if "is_correct" in args.gen_input_features:
+    #     args.wandb_name += "ic-"
+    # if "is_on_time" in args.gen_input_features:
+    #     args.wandb_name += "iot-"
+    # if "elapsed_time" in args.gen_input_features:
+    #     args.wandb_name += "et-"
+    # if "lag_time" in args.gen_input_features:
+    #     args.wandb_name += "lt-"
+    # args.wandb_name = args.wandb_name.rstrip("-") + "_"
+    # # masked
+    # if "is_correct" in args.gen_masked_features:
+    #     args.wandb_name += "ic-"
+    # if "is_on_time" in args.gen_masked_features:
+    #     args.wandb_name += "iot-"
+    # if "elapsed_time" in args.gen_masked_features:
+    #     args.wandb_name += "et-"
+    # if "lag_time" in args.gen_masked_features:
+    #     args.wandb_name += "lt-"
+    # args.wandb_name = args.wandb_name.rstrip("-") + "_"
+    # # target
+    # if "is_correct" in args.gen_targets:
+    #     args.wandb_name += "ic-"
+    # if "is_on_time" in args.gen_targets:
+    #     args.wandb_name += "iot-"
+    # if "elapsed_time" in args.gen_targets:
+    #     args.wandb_name += "et-"
+    # if "lag_time" in args.gen_targets:
+    #     args.wandb_name += "lt-"
+    # args.wandb_name = args.wandb_name.rstrip("-")
+    # args.wandb_name += f"_{args.optim}_{args.aug_mode}"
+
+    args.wandb_name = f"finetune_only_{args.optim}_{args.aug_mode}"
 
     # parse tags
     args.wandb_tags = (

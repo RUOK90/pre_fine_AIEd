@@ -8,13 +8,16 @@ from config import *
 
 def load_pretrained_weight(model, weight_path):
     model = copy.deepcopy(model)
-    model_dict = model.state_dict()
-    pretrained_dict = torch.load(weight_path, map_location=ARGS.device)
-    filtered_pretrained_dict = {
-        name: params for name, params in pretrained_dict.items() if name in model_dict
-    }
-    model_dict.update(filtered_pretrained_dict)
-    model.load_state_dict(model_dict)
+    if weight_path is not None:
+        model_dict = model.state_dict()
+        pretrained_dict = torch.load(weight_path, map_location=ARGS.device)
+        filtered_pretrained_dict = {
+            name: params
+            for name, params in pretrained_dict.items()
+            if name in model_dict
+        }
+        model_dict.update(filtered_pretrained_dict)
+        model.load_state_dict(model_dict)
 
     return model
 
@@ -54,8 +57,8 @@ def batch_to_device(batch):
         batch["label"][name] = feature.to(ARGS.device).float()
 
     if "input_mask" in batch:
-        batch["input_mask"] = batch["input_mask"].to(ARGS.device).float()
+        batch["input_mask"] = batch["input_mask"].to(ARGS.device).bool()
     if "padding_mask" in batch:
-        batch["padding_mask"] = batch["padding_mask"].to(ARGS.device).float()
+        batch["padding_mask"] = batch["padding_mask"].to(ARGS.device).bool()
     if "seq_size" in batch:
         batch["seq_size"] = batch["seq_size"].to(ARGS.device).float()
