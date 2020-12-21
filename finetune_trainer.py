@@ -113,7 +113,7 @@ class FineTuneTrainer:
                 self._cur_epoch = epoch
 
                 # train
-                self._finetune_model.train()
+                self._model.train()
                 self._score_forward(
                     dataloaders["train"], cross_num, "train", pretrain_epoch
                 )
