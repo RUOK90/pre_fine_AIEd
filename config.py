@@ -99,6 +99,7 @@ def get_arg_parser():
     train_args.add_argument("--random_mask_ratio", type=float, default=0.6)
     train_args.add_argument("--aug_ratio", type=float, default=0.5)
     train_args.add_argument("--aug_sample_ratio", type=float, default=0.5)
+    train_args.add_argument("--cut_point", type=float, default=0.2)
     train_args.add_argument(
         "--aug_mode",
         type=str,

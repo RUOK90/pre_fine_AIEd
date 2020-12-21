@@ -123,8 +123,12 @@ class FineTuneTrainer:
                     )
 
             # test
-            self._model.load_state_dict(torch.load(self._finetuned_weight_path))
-            self._score_forward(dataloaders["test"], cross_num, "test", pretrain_epoch)
+            with torch.no_grad():
+                self._model.load_state_dict(torch.load(self._finetuned_weight_path))
+                self._model.eval()
+                self._score_forward(
+                    dataloaders["test"], cross_num, "test", pretrain_epoch
+                )
 
         # mean over cross validation split print and wandb output
         finetune_mean_best_val_perf = np.mean(self._best_val_perf)
