@@ -43,9 +43,11 @@ class Trainer:
             batch_total_loss = 0
 
             for target, (output, sigmoid_output) in outputs.items():
-                label = batch["label"][target].masked_select(batch["input_mask"])
-                output = output.masked_select(batch["input_mask"])
-                sigmoid_output = sigmoid_output.masked_select(batch["input_mask"])
+                label = batch["label"][target].masked_select(batch["input_mask"].bool())
+                output = output.masked_select(batch["input_mask"].bool())
+                sigmoid_output = sigmoid_output.masked_select(
+                    batch["input_mask"].bool()
+                )
 
                 if target in ["is_correct", "is_on_time"]:
                     loss = self._bce_loss(output, label)

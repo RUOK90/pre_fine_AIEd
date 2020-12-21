@@ -2,6 +2,7 @@ import pickle as pkl
 import numpy as np
 import torch
 from torch.utils import data
+import torch.nn.functional as F
 
 from config import *
 
@@ -51,7 +52,7 @@ def get_dataloaders(q_info_dic, pretrain_base_path):
     return pretrain_dataloaders
 
 
-class EdNetDataSet(data.Dataset):
+class np_EdNetDataSet(data.Dataset):
     def __init__(self, q_info_dic, user_inter_path, user_windows):
         self._q_info_dic = q_info_dic
         self._user_inter_path = user_inter_path
@@ -68,7 +69,7 @@ class EdNetDataSet(data.Dataset):
         return processed_inters
 
 
-def get_user_data(user_inter_path, user_windows):
+def np_get_user_data(user_inter_path, user_windows):
     with open(user_inter_path, "rb") as f_r:
         uid2inters = pkl.load(f_r)
 
@@ -93,7 +94,7 @@ def get_user_data(user_inter_path, user_windows):
     return user_idxs, inters
 
 
-def preprocess_inters(inters, window_idx):
+def np_preprocess_inters(inters, window_idx):
     (
         qids,
         parts,
@@ -231,10 +232,100 @@ def _preprocess_inters(inters, window_idx):
     }
 
 
+class EdNetDataSet(data.Dataset):
+    def __init__(self, q_info_dic, user_inter_path, user_windows):
+        self._q_info_dic = q_info_dic
+        self._user_inter_path = user_inter_path
+        self._user_windows = torch.Tensor(user_windows)
+        self._user_inters = get_user_data(user_inter_path)
+
+    def __len__(self):
+        return len(self._user_windows)
+
+    def __getitem__(self, idx):
+        uid, window_idx = self._user_windows[idx]
+        uid = int(uid.item())
+        window_idx = int(window_idx.item())
+        processed_inters = preprocess_inters(self._user_inters[uid], window_idx)
+        return processed_inters
+
+
+def get_user_data(user_inter_path):
+    with open(user_inter_path, "rb") as f_r:
+        uid2inters = pkl.load(f_r)
+
+    for uid, inters in uid2inters.items():
+        uid2inters[uid] = torch.Tensor(inters)
+
+    return uid2inters
+
+
+def preprocess_inters(inters, window_idx):
+    (
+        qids,
+        parts,
+        is_corrects,
+        is_on_times,
+        elapsed_times,
+        lag_times,
+    ) = inters
+    elapsed_times = (elapsed_times / Const.MAX_ELAPSED_TIME_IN_S).minimum(
+        torch.ones_like(elapsed_times)
+    )
+    lag_times = (lag_times / Const.MAX_LAG_TIME_IN_S).minimum(
+        torch.ones_like(lag_times)
+    )
+
+    ednet_features = {
+        "qid": qids,
+        "part": parts,
+        "is_correct": is_corrects,
+        "is_on_time": is_on_times,
+        "elapsed_time": elapsed_times,
+        "lag_time": lag_times,
+    }
+
+    # get all configured features
+    start_idx = window_idx
+    end_idx = start_idx + ARGS.max_seq_size
+    all_features = {
+        name: ednet_features[name][start_idx:end_idx] for name in ARGS.all_features
+    }
+
+    # get generator input features
+    masked_features, input_masks = get_masked_features(all_features)
+
+    # get labels
+    labels = get_labels(all_features)
+
+    # get zero padded generator input features
+    padded_features, padding_masks = get_padded_features(
+        masked_features, return_padding_mask=True
+    )
+
+    # get zero padded input masks
+    padded_input_masks = get_padded_masks(input_masks)
+
+    # get zero padded labels
+    padded_labels, _ = get_padded_features(labels, return_padding_mask=False)
+
+    seq_size = len(list(all_features.values())[0])
+
+    return {
+        "input": padded_features,
+        "label": padded_labels,
+        "input_mask": padded_input_masks,
+        "padding_mask": padding_masks,
+        "seq_size": seq_size,
+    }
+
+
 def get_masked_features(features):
     masked_features = {}
     seq_size = len(list(features.values())[0])
-    masks = np.random.random_sample(seq_size) < ARGS.random_mask_ratio  # True: mask
+    masks = torch.bernoulli(
+        torch.full((seq_size,), ARGS.random_mask_ratio)
+    )  # 1: masking
     for name, feature in features.items():
         if name in ARGS.gen_masked_features:
             masked_feature = feature * (1 - masks) + masks * Const.MASK_VAL[name]
@@ -265,6 +356,118 @@ def get_padded_features(features, return_padding_mask):
     seq_size = len(list(features.values())[0])
     num_pads = max(ARGS.max_seq_size - seq_size, 0)
     for name, feature in features.items():
+        features[name] = F.pad(feature, (0, num_pads), "constant", value=Const.PAD_IDX)
+
+    padding_masks = None
+    if return_padding_mask:
+        padding_masks = F.pad(
+            torch.zeros(seq_size), (0, num_pads), "constant", value=1
+        )  # 1: padding
+
+    return features, padding_masks
+
+
+def get_padded_masks(masks):
+    seq_size = len(masks)
+    num_pads = max(ARGS.max_seq_size - seq_size, 0)
+    padded_masks = F.pad(masks, (0, num_pads), "constant", value=0)
+    return padded_masks
+
+
+####################################################################################
+
+
+def _preprocess_inters(inters, window_idx):
+    (
+        qids,
+        parts,
+        is_corrects,
+        is_on_times,
+        elapsed_times,
+        lag_times,
+    ) = inters
+    elapsed_times = [min(et / Const.MAX_ELAPSED_TIME_IN_S, 1) for et in elapsed_times]
+    lag_times = [min(lt / Const.MAX_LAG_TIME_IN_S, 1) for lt in lag_times]
+
+    ednet_features = {
+        "qid": qids,
+        "part": parts,
+        "is_correct": is_corrects,
+        "is_on_time": is_on_times,
+        "elapsed_time": elapsed_times,
+        "lag_time": lag_times,
+    }
+
+    # get all configured features
+    start_idx = window_idx
+    end_idx = start_idx + ARGS.max_seq_size
+    all_features = {
+        name: np.array(ednet_features[name][start_idx:end_idx])
+        for name in ARGS.all_features
+    }
+
+    # get generator input features
+    masked_features, input_masks = get_masked_features(all_features)
+
+    # get labels
+    labels = get_labels(all_features)
+
+    # get zero padded generator input features
+    padded_features, padding_masks = get_padded_features(
+        masked_features, return_padding_mask=True
+    )
+
+    # get zero padded input masks
+    padded_input_masks = get_padded_masks(input_masks)
+
+    # get zero padded labels
+    padded_labels, _ = get_padded_features(labels, return_padding_mask=False)
+
+    seq_size = len(list(all_features.values())[0])
+
+    return {
+        "input": padded_features,
+        "label": padded_labels,
+        "input_mask": padded_input_masks,
+        "padding_mask": padding_masks,
+        "seq_size": seq_size,
+    }
+
+
+def _get_masked_features(features):
+    masked_features = {}
+    seq_size = len(list(features.values())[0])
+    masks = np.random.random_sample(seq_size) < ARGS.random_mask_ratio  # True: mask
+    for name, feature in features.items():
+        if name in ARGS.gen_masked_features:
+            masked_feature = feature * (1 - masks) + masks * Const.MASK_VAL[name]
+            masked_features[name] = masked_feature
+        else:
+            masked_features[name] = feature
+
+    return masked_features, masks
+
+
+def _get_labels(features):
+    labels = {}
+    for name, feature in features.items():
+        if name in ARGS.gen_targets:
+            if name == "is_correct":
+                labels[name] = 2 - feature
+            elif name == "is_on_time":
+                labels[name] = 2 - feature
+            elif name == "elapsed_time":
+                labels[name] = feature
+            elif name == "lag_time":
+                labels[name] = feature
+
+    return labels
+
+
+def _get_padded_features(features, return_padding_mask):
+    seq_size = len(list(features.values())[0])
+    num_pads = max(ARGS.max_seq_size - seq_size, 0)
+    for name, feature in features.items():
         features[name] = np.pad(
             feature, (0, num_pads), "constant", constant_values=Const.PAD_IDX
         )
@@ -281,7 +484,7 @@ def get_padded_features(features, return_padding_mask):
     return features, padding_masks
 
 
-def get_padded_masks(masks):
+def _get_padded_masks(masks):
     seq_size = len(masks)
     num_pads = max(ARGS.max_seq_size - seq_size, 0)
     padded_masks = np.pad(

@@ -54,8 +54,8 @@ def batch_to_device(batch):
         batch["label"][name] = feature.to(ARGS.device).float()
 
     if "input_mask" in batch:
-        batch["input_mask"] = batch["input_mask"].to(ARGS.device)
+        batch["input_mask"] = batch["input_mask"].to(ARGS.device).float()
     if "padding_mask" in batch:
-        batch["padding_mask"] = batch["padding_mask"].to(ARGS.device)
+        batch["padding_mask"] = batch["padding_mask"].to(ARGS.device).float()
     if "seq_size" in batch:
-        batch["seq_size"] = batch["seq_size"].to(ARGS.device)
+        batch["seq_size"] = batch["seq_size"].to(ARGS.device).float()
