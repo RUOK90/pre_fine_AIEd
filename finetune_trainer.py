@@ -10,8 +10,9 @@ from config import *
 
 class FineTuneTrainer:
     def __init__(self, model, dataloaders):
-        self._model = model
-        self._model.to(ARGS.device)
+        self._dummy_model = model
+        self._dummy_model.to(ARGS.device)
+        self._model = None
         self._dataloaders = dataloaders
         self._optim = get_optimizer(model, ARGS.optim)
 
@@ -104,13 +105,15 @@ class FineTuneTrainer:
         self._test_perf = [np.inf for i in range(ARGS.num_cross_folds)]
         for cross_num, dataloaders in self._dataloaders.items():
             set_random_seed(ARGS.random_seed)
-            model = load_pretrained_weight(self._model, pretrained_weight_path)
+            self._model = load_pretrained_weight(
+                self._dummy_model, pretrained_weight_path
+            )
             for epoch in range(ARGS.num_finetune_epochs):
                 print(f"\nCross Num: {cross_num:03d}, Finetuning Epoch: {epoch:03d}")
                 self._cur_epoch = epoch
 
                 # train
-                self._model.train()
+                self._finetune_model.train()
                 self._score_forward(
                     dataloaders["train"], cross_num, "train", pretrain_epoch
                 )
