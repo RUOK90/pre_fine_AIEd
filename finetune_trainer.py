@@ -13,8 +13,8 @@ class FineTuneTrainer:
         self._dummy_model = model
         self._dummy_model.to(ARGS.device)
         self._model = None
+        self._optim = None
         self._dataloaders = dataloaders
-        self._optim = get_optimizer(model, ARGS.optim)
 
         self._bce_loss = nn.BCEWithLogitsLoss(reduction="mean")
         self._l1_loss = nn.L1Loss(reduction="none")
@@ -108,6 +108,7 @@ class FineTuneTrainer:
             self._model = load_pretrained_weight(
                 self._dummy_model, pretrained_weight_path
             )
+            self._optim = get_optimizer(self._model, ARGS.optim)
             for epoch in range(ARGS.num_finetune_epochs):
                 print(f"\nCross Num: {cross_num:03d}, Finetuning Epoch: {epoch:03d}")
                 self._cur_epoch = epoch
