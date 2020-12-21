@@ -66,6 +66,8 @@ class Trainer:
                     batch_results[target]["l1"].extend(l1.detach().cpu().numpy())
 
             if self._model.training:
+                if step / len(dataloader) > ARGS.cut_point:
+                    break
                 self._optim.update(batch_total_loss)
 
             if ARGS.debug_mode and step == 4:
