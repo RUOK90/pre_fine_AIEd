@@ -56,7 +56,7 @@ def get_arg_parser():
 
     #################### Logging args ####################
     logging_args = parser.add_argument_group("Logging args")
-    logging_args.add_argument("--use_wandb", type=str2bool, default=False)
+    logging_args.add_argument("--use_wandb", type=str2bool, default=True)
     logging_args.add_argument("--wandb_project", type=str, default="pre_fine_aied")
     logging_args.add_argument("--wandb_name", type=str)
     logging_args.add_argument("--wandb_tags")
@@ -87,8 +87,8 @@ def get_arg_parser():
     train_args.add_argument("--num_cross_folds", type=int, default=5)
     train_args.add_argument("--min_seq_size", type=int, default=11)  # +1 for cls
     train_args.add_argument("--max_seq_size", type=int, default=101)  # +1 for cls
-    train_args.add_argument("--train_batch_size", type=int, default=256)
-    train_args.add_argument("--test_batch_size", type=int, default=256)
+    train_args.add_argument("--train_batch_size", type=int, default=1024)
+    train_args.add_argument("--test_batch_size", type=int, default=2048)
     train_args.add_argument(
         "--optim", type=str, choices=["scheduled", "noam"], default="scheduled"
     )
@@ -97,7 +97,7 @@ def get_arg_parser():
     train_args.add_argument("--num_pretrain_epochs", type=int, default=100)
     train_args.add_argument("--num_finetune_epochs", type=int, default=100)
     train_args.add_argument("--random_mask_ratio", type=float, default=0.6)
-    train_args.add_argument("--cut_point", type=float, default=0.2)
+    train_args.add_argument("--cut_point", type=float, default=0.05)
     train_args.add_argument("--aug_ratio", type=float, default=0.5)
     train_args.add_argument("--aug_sample_ratio", type=float, default=0.5)
     train_args.add_argument(
@@ -189,7 +189,7 @@ def get_arg_parser():
     model_args.add_argument("--dropout", type=float, default=0.2)
     # ELECTRA
     model_args.add_argument("--loss_lambda", type=int, default=1)
-    model_args.add_argument("--embedding_size", type=int, default=128)
+    model_args.add_argument("--embedding_size", type=int, default=256)
     model_args.add_argument("--hidden_size", type=int, default=256)
     model_args.add_argument(
         "--intermediate_size", type=int, default=1024
@@ -210,40 +210,28 @@ def get_args():
 
     # name
     # input_masked_target
-    # args.wandb_name = ""
-    # # input
-    # if "is_correct" in args.input_features:
-    #     args.wandb_name += "ic-"
-    # if "is_on_time" in args.input_features:
-    #     args.wandb_name += "iot-"
-    # if "elapsed_time" in args.input_features:
-    #     args.wandb_name += "et-"
-    # if "lag_time" in args.input_features:
-    #     args.wandb_name += "lt-"
-    # args.wandb_name = args.wandb_name.rstrip("-") + "_"
-    # # masked
-    # if "is_correct" in args.masked_features:
-    #     args.wandb_name += "ic-"
-    # if "is_on_time" in args.masked_features:
-    #     args.wandb_name += "iot-"
-    # if "elapsed_time" in args.masked_features:
-    #     args.wandb_name += "et-"
-    # if "lag_time" in args.masked_features:
-    #     args.wandb_name += "lt-"
-    # args.wandb_name = args.wandb_name.rstrip("-") + "_"
-    # # target
-    # if "is_correct" in args.targets:
-    #     args.wandb_name += "ic-"
-    # if "is_on_time" in args.targets:
-    #     args.wandb_name += "iot-"
-    # if "elapsed_time" in args.targets:
-    #     args.wandb_name += "et-"
-    # if "lag_time" in args.targets:
-    #     args.wandb_name += "lt-"
-    # args.wandb_name = args.wandb_name.rstrip("-")
-    # args.wandb_name += f"_{args.optim}_{args.aug_mode}"
-    #
-    args.wandb_name = f"finetune_only_{args.finetune_output_func}"
+    args.wandb_name = ""
+    # input
+    if "is_correct" in args.input_features:
+        args.wandb_name += "ic-"
+    if "is_on_time" in args.input_features:
+        args.wandb_name += "iot-"
+    if "elapsed_time" in args.input_features:
+        args.wandb_name += "et-"
+    if "lag_time" in args.input_features:
+        args.wandb_name += "lt-"
+    args.wandb_name = args.wandb_name.rstrip("-") + "_"
+    # target
+    if "is_correct" in args.targets:
+        args.wandb_name += "ic-"
+    if "is_on_time" in args.targets:
+        args.wandb_name += "iot-"
+    if "elapsed_time" in args.targets:
+        args.wandb_name += "et-"
+    if "lag_time" in args.targets:
+        args.wandb_name += "lt-"
+    args.wandb_name = args.wandb_name.rstrip("-") + "_"
+    args.wandb_name += args.finetune_output_func
 
     # parse tags
     args.wandb_tags = (

@@ -6,21 +6,33 @@ class ElectraAIEdPretrainModel(nn.Module):
     def __init__(self):
         super(ElectraAIEdPretrainModel, self).__init__()
         # set config
-        config = ElectraConfig()
-        config.embedding_size = ARGS.embedding_size
-        config.hidden_size = ARGS.hidden_size
-        config.intermediate_size = ARGS.intermediate_size
-        config.num_hidden_layers = ARGS.num_hidden_layers
-        config.num_attention_heads = ARGS.num_attention_heads
-        config.hidden_act = ARGS.hidden_act
-        config.hidden_dropout_prob = ARGS.hidden_dropout_prob
-        config.attention_probs_dropout_prob = ARGS.attention_probs_dropout_prob
-        config.pad_token_id = Const.PAD_VAL
-        config.max_position_embeddings = ARGS.max_seq_size
+        gen_config = ElectraConfig()
+        gen_config.embedding_size = ARGS.embedding_size
+        gen_config.hidden_size = int(ARGS.hidden_size / 4)
+        gen_config.intermediate_size = int(ARGS.intermediate_size / 4)
+        gen_config.num_hidden_layers = ARGS.num_hidden_layers
+        gen_config.num_attention_heads = int(ARGS.num_attention_heads / 4)
+        gen_config.hidden_act = ARGS.hidden_act
+        gen_config.hidden_dropout_prob = ARGS.hidden_dropout_prob
+        gen_config.attention_probs_dropout_prob = ARGS.attention_probs_dropout_prob
+        gen_config.pad_token_id = Const.PAD_VAL
+        gen_config.max_position_embeddings = ARGS.max_seq_size
 
-        self.embeds = ElectraAIEdEmbeddings(config)
-        self.gen_model = ElectraAIEdMaskedLM(config)
-        self.dis_model = ElectraAIEdPreTraining(config)
+        dis_config = ElectraConfig()
+        dis_config.embedding_size = ARGS.embedding_size
+        dis_config.hidden_size = ARGS.hidden_size
+        dis_config.intermediate_size = ARGS.intermediate_size
+        dis_config.num_hidden_layers = ARGS.num_hidden_layers
+        dis_config.num_attention_heads = ARGS.num_attention_heads
+        dis_config.hidden_act = ARGS.hidden_act
+        dis_config.hidden_dropout_prob = ARGS.hidden_dropout_prob
+        dis_config.attention_probs_dropout_prob = ARGS.attention_probs_dropout_prob
+        dis_config.pad_token_id = Const.PAD_VAL
+        dis_config.max_position_embeddings = ARGS.max_seq_size
+
+        self.embeds = ElectraAIEdEmbeddings(dis_config)
+        self.gen_model = ElectraAIEdMaskedLM(gen_config)
+        self.dis_model = ElectraAIEdPreTraining(dis_config)
 
     def forward(self, unmasked_features, masked_features, input_masks, padding_masks):
         attention_masks = (~padding_masks).long()

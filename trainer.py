@@ -150,10 +150,10 @@ class Trainer:
                 # set random seed
                 set_random_seed(ARGS.random_seed + epoch)
 
-                # pretrain train
-                self._pretrain_model.train()
-                print(f"pretraining train")
-                self._pretrain(self._pretrain_dataloaders["train"], "train")
+                # # pretrain train
+                # self._pretrain_model.train()
+                # print(f"pretraining train")
+                # self._pretrain(self._pretrain_dataloaders["train"], "train")
 
                 # pretrain val
                 print("pretraining validation")

@@ -128,7 +128,7 @@ def preprocess_inters(inters, window_idx):
     # get zero padded labels
     padded_labels, _ = get_padded_features(labels, return_padding_mask=False)
 
-    seq_size = len(cls_appended_all_features["qid"])
+    seq_size = len(list(cls_appended_all_features.values())[0])
 
     return {
         "unmasked_feature": padded_unmasked_features,
@@ -142,7 +142,7 @@ def preprocess_inters(inters, window_idx):
 
 def get_masked_input_features(features):
     masked_input_features = {}
-    seq_size = len(features["qid"])
+    seq_size = len(list(features.values())[0])
     masks = np.random.random_sample(seq_size) < ARGS.random_mask_ratio  # True: mask
     for name, feature in features.items():
         if name in ARGS.masked_features:
@@ -167,7 +167,7 @@ def get_labels(features):
 
 
 def get_padded_features(features, return_padding_mask):
-    seq_size = len(features["qid"])
+    seq_size = len(list(features.values())[0])
     num_pads = max(ARGS.max_seq_size - seq_size, 0)
     for name, feature in features.items():
         features[name] = np.pad(

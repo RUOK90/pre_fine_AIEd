@@ -203,7 +203,7 @@ def get_augmented_features(features, aug_mode):
     elif aug_mode == "aug_only" or (
         aug_mode == "both" and np.random.random_sample() < ARGS.aug_sample_ratio
     ):
-        seq_size = len(features["qid"])
+        seq_size = len(list(features.values())[0])
         augmented_seq_size = int(seq_size * ARGS.aug_ratio)
         sampled_idxs = np.random.choice(seq_size, augmented_seq_size, replace=False)
         sorted_sampled_idxs = np.sort(sampled_idxs)
@@ -222,7 +222,7 @@ def get_augmented_features(features, aug_mode):
 
 
 def get_padded_features(features, return_padding_mask):
-    seq_size = len(features["qid"])
+    seq_size = len(list(features.values())[0])
     num_pads = max(ARGS.max_seq_size - seq_size, 0)
     for name, feature in features.items():
         features[name] = np.pad(

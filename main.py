@@ -31,12 +31,10 @@ if __name__ == "__main__":
     # get model
     if ARGS.model == "am":
         pretrain_model = PretrainModel()
-        if ARGS.downstream_task == "score":
-            finetune_model = ScoreModel()
+        finetune_model = ScoreModel()
     elif ARGS.model == "electra":
         pretrain_model = ElectraAIEdPretrainModel()
-        if ARGS.downstream_task == "score":
-            finetune_model = ElectraAIEdFinetuneModel()
+        finetune_model = ElectraAIEdFinetuneModel()
 
     finetune_trainer = FineTuneTrainer(finetune_model, finetune_dataloaders)
     trainer = Trainer(pretrain_model, pretrain_dataloaders, finetune_trainer)
