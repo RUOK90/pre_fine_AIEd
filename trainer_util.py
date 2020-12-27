@@ -41,24 +41,42 @@ def get_optimizer(model, optimizer):
 
 
 def batch_to_device(batch):
-    for name, feature in batch["input"].items():
-        if (
-            name == "qid"
-            or name == "part"
-            or name == "is_correct"
-            or name == "is_on_time"
-        ):
-            batch["input"][name] = feature.to(ARGS.device).long()
+    for group_name, group in batch.items():
+        if group_name == "unmasked_feature" or group_name == "masked_feature":
+            for name, feature in batch[group_name].items():
+                if (
+                    name == "qid"
+                    or name == "part"
+                    or name == "is_correct"
+                    or name == "is_on_time"
+                ):
+                    batch[group_name][name] = feature.to(ARGS.device).long()
 
-        if name == "elapsed_time" or name == "lag_time":
-            batch["input"][name] = feature.to(ARGS.device).float()
+                elif name == "elapsed_time" or name == "lag_time":
+                    batch[group_name][name] = feature.to(ARGS.device).float()
 
-    for name, feature in batch["label"].items():
-        batch["label"][name] = feature.to(ARGS.device).float()
+        elif group_name == "label":
+            for name, feature in batch[group_name].items():
+                if (
+                    name == "qid"
+                    or name == "part"
+                    or name == "is_correct"
+                    or name == "is_on_time"
+                ):
+                    batch[group_name][name] = feature.to(ARGS.device).long()
+                elif (
+                    name == "elapsed_time"
+                    or name == "lag_time"
+                    or name == "lc"
+                    or name == "rc"
+                ):
+                    batch[group_name][name] = feature.to(ARGS.device).float()
 
-    if "input_mask" in batch:
-        batch["input_mask"] = batch["input_mask"].to(ARGS.device).bool()
-    if "padding_mask" in batch:
-        batch["padding_mask"] = batch["padding_mask"].to(ARGS.device).bool()
-    if "seq_size" in batch:
-        batch["seq_size"] = batch["seq_size"].to(ARGS.device).float()
+        elif group_name == "input_mask":
+            batch[group_name] = batch[group_name].to(ARGS.device).bool()
+
+        elif group_name == "padding_mask":
+            batch[group_name] = batch[group_name].to(ARGS.device).bool()
+
+        elif group_name == "seq_size":
+            batch[group_name] = batch[group_name].to(ARGS.device).float()

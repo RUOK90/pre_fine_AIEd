@@ -85,8 +85,8 @@ def get_arg_parser():
     train_args = parser.add_argument_group("Train args")
     train_args.add_argument("--random_seed", type=int, default=1234)
     train_args.add_argument("--num_cross_folds", type=int, default=5)
-    train_args.add_argument("--min_seq_size", type=int, default=10)
-    train_args.add_argument("--max_seq_size", type=int, default=100)
+    train_args.add_argument("--min_seq_size", type=int, default=11)  # +1 for cls
+    train_args.add_argument("--max_seq_size", type=int, default=101)  # +1 for cls
     train_args.add_argument("--train_batch_size", type=int, default=256)
     train_args.add_argument("--test_batch_size", type=int, default=256)
     train_args.add_argument(
@@ -97,9 +97,9 @@ def get_arg_parser():
     train_args.add_argument("--num_pretrain_epochs", type=int, default=100)
     train_args.add_argument("--num_finetune_epochs", type=int, default=100)
     train_args.add_argument("--random_mask_ratio", type=float, default=0.6)
+    train_args.add_argument("--cut_point", type=float, default=0.2)
     train_args.add_argument("--aug_ratio", type=float, default=0.5)
     train_args.add_argument("--aug_sample_ratio", type=float, default=0.5)
-    train_args.add_argument("--cut_point", type=float, default=0.2)
     train_args.add_argument(
         "--aug_mode",
         type=str,
@@ -107,13 +107,29 @@ def get_arg_parser():
         default="aug_only",
     )
     train_args.add_argument(
+        "--time_output_func",
+        type=str,
+        choices=["identity", "sigmoid"],
+        default="sigmoid",
+    )
+    train_args.add_argument(
+        "--time_loss", type=str, choices=["bce", "mse"], default="mse"
+    )
+    train_args.add_argument(
+        "--finetune_output_func",
+        type=str,
+        choices=["mean", "cls"],
+        default="mean",
+    )
+
+    train_args.add_argument(
         "--train_mode",
         type=str,
         choices=["pretrain_only", "finetune_only", "both"],
         default="both",
     )
     train_args.add_argument(
-        "--gen_input_features",
+        "--input_features",
         type=str,
         choices=[
             "qid",
@@ -127,7 +143,7 @@ def get_arg_parser():
         default=["qid", "part", "is_correct", "elapsed_time", "lag_time"],
     )
     train_args.add_argument(
-        "--gen_masked_features",
+        "--masked_features",
         type=str,
         choices=[
             "qid",
@@ -141,7 +157,7 @@ def get_arg_parser():
         default=["is_correct", "elapsed_time"],
     )
     train_args.add_argument(
-        "--gen_targets",
+        "--targets",
         type=str,
         choices=[
             "qid",
@@ -152,7 +168,7 @@ def get_arg_parser():
             "lag_time",
         ],
         nargs="+",
-        default=["is_correct", "is_on_time"],
+        default=["is_correct", "elapsed_time"],
     )
     train_args.add_argument(
         "--downstream_task",
@@ -164,12 +180,25 @@ def get_arg_parser():
     #################### Model args ####################
     model_args = parser.add_argument_group("Model args")
     model_args.add_argument(
-        "--model", type=str, choices=["am", "bert", "electra"], default="am"
+        "--model", type=str, choices=["am", "bert", "electra"], default="electra"
     )
-    train_args.add_argument("--num_layers", type=int, default=2)
-    train_args.add_argument("--d_model", type=int, default=256)
-    train_args.add_argument("--num_heads", type=int, default=8)
-    train_args.add_argument("--dropout", type=float, default=0.2)
+    # AM
+    model_args.add_argument("--num_layers", type=int, default=2)
+    model_args.add_argument("--d_model", type=int, default=256)
+    model_args.add_argument("--num_heads", type=int, default=8)
+    model_args.add_argument("--dropout", type=float, default=0.2)
+    # ELECTRA
+    model_args.add_argument("--loss_lambda", type=int, default=1)
+    model_args.add_argument("--embedding_size", type=int, default=128)
+    model_args.add_argument("--hidden_size", type=int, default=256)
+    model_args.add_argument(
+        "--intermediate_size", type=int, default=1024
+    )  # 4 * hidden_size
+    model_args.add_argument("--num_hidden_layers", type=int, default=2)
+    model_args.add_argument("--num_attention_heads", type=int, default=8)
+    model_args.add_argument("--hidden_act", type=str, default="gelu")
+    model_args.add_argument("--hidden_dropout_prob", type=float, default=0.1)
+    model_args.add_argument("--attention_probs_dropout_prob", type=float, default=0.1)
 
     return parser
 
@@ -181,40 +210,41 @@ def get_args():
 
     # name
     # input_masked_target
-    args.wandb_name = ""
-    # input
-    if "is_correct" in args.gen_input_features:
-        args.wandb_name += "ic-"
-    if "is_on_time" in args.gen_input_features:
-        args.wandb_name += "iot-"
-    if "elapsed_time" in args.gen_input_features:
-        args.wandb_name += "et-"
-    if "lag_time" in args.gen_input_features:
-        args.wandb_name += "lt-"
-    args.wandb_name = args.wandb_name.rstrip("-") + "_"
-    # masked
-    if "is_correct" in args.gen_masked_features:
-        args.wandb_name += "ic-"
-    if "is_on_time" in args.gen_masked_features:
-        args.wandb_name += "iot-"
-    if "elapsed_time" in args.gen_masked_features:
-        args.wandb_name += "et-"
-    if "lag_time" in args.gen_masked_features:
-        args.wandb_name += "lt-"
-    args.wandb_name = args.wandb_name.rstrip("-") + "_"
-    # target
-    if "is_correct" in args.gen_targets:
-        args.wandb_name += "ic-"
-    if "is_on_time" in args.gen_targets:
-        args.wandb_name += "iot-"
-    if "elapsed_time" in args.gen_targets:
-        args.wandb_name += "et-"
-    if "lag_time" in args.gen_targets:
-        args.wandb_name += "lt-"
-    args.wandb_name = args.wandb_name.rstrip("-")
-    args.wandb_name += f"_{args.optim}_{args.aug_mode}"
-
+    # args.wandb_name = ""
+    # # input
+    # if "is_correct" in args.input_features:
+    #     args.wandb_name += "ic-"
+    # if "is_on_time" in args.input_features:
+    #     args.wandb_name += "iot-"
+    # if "elapsed_time" in args.input_features:
+    #     args.wandb_name += "et-"
+    # if "lag_time" in args.input_features:
+    #     args.wandb_name += "lt-"
+    # args.wandb_name = args.wandb_name.rstrip("-") + "_"
+    # # masked
+    # if "is_correct" in args.masked_features:
+    #     args.wandb_name += "ic-"
+    # if "is_on_time" in args.masked_features:
+    #     args.wandb_name += "iot-"
+    # if "elapsed_time" in args.masked_features:
+    #     args.wandb_name += "et-"
+    # if "lag_time" in args.masked_features:
+    #     args.wandb_name += "lt-"
+    # args.wandb_name = args.wandb_name.rstrip("-") + "_"
+    # # target
+    # if "is_correct" in args.targets:
+    #     args.wandb_name += "ic-"
+    # if "is_on_time" in args.targets:
+    #     args.wandb_name += "iot-"
+    # if "elapsed_time" in args.targets:
+    #     args.wandb_name += "et-"
+    # if "lag_time" in args.targets:
+    #     args.wandb_name += "lt-"
+    # args.wandb_name = args.wandb_name.rstrip("-")
+    # args.wandb_name += f"_{args.optim}_{args.aug_mode}"
+    #
     # args.wandb_name = f"finetune_only_{args.optim}_{args.aug_mode}"
+    args.wandb_name = f"electra"
 
     # parse tags
     args.wandb_tags = (
@@ -233,8 +263,8 @@ def get_args():
         args.pretrain_base_path = "/private/datasets/LAK21_AM/load_debug"
         args.train_batch_size = 4
         args.test_batch_size = 4
-        args.num_pretrain_epochs = 10
-        args.num_finetune_epochs = 10
+        args.num_pretrain_epochs = 5
+        args.num_finetune_epochs = 5
 
     # wandb
     if args.use_wandb:
@@ -253,13 +283,21 @@ def get_args():
     else:
         args.device = "cpu"
 
-    # get all features
-    args.all_features = args.gen_input_features + args.gen_targets
-    args.all_features.sort()
-
     # get weight path
     args.weight_path = f"{args.weight_base_path}/{args.model}/{args.wandb_name}"
     os.makedirs(args.weight_path, exist_ok=True)
+
+    # get all features
+    args.all_features = args.input_features + args.targets
+    args.all_features.sort()
+
+    # time output_func and loss sanity check
+    if args.time_loss == "bce":
+        assert args.time_output_func == "sigmoid"
+
+    # electra sanity check
+    if args.model == "electra":
+        assert set(args.masked_features) == set(args.targets)
 
     return args, parser
 
@@ -274,12 +312,36 @@ class Const:
     DEFAULT_TIME_LIMIT_IN_MS = 43000
     MAX_LAG_TIME_IN_S = 86400
 
-    PAD_IDX = 0
-    TRUE_IDX = 1
-    FALSE_IDX = 2
+    PAD_VAL = 0
+    TRUE_VAL = 1
+    FALSE_VAL = 2
+
+    CATE_VARS = ["qid", "part", "is_correct", "is_on_time"]
+    CONT_VARS = ["elapsed_time", "lag_time"]
+
+    FEATURE_SIZE = {
+        "qid": None,  # initialized in get_q_info_dic
+        "part": 8,  # 8 for unknown
+        "is_correct": 2,
+        "is_on_time": 2,
+        "elapsed_time": None,  # continuous var
+        "lag_time": None,  # continuous var
+    }
+
+    CLS_VAL = {
+        "qid": None,  # initialized in get_q_info_dic
+        "part": FEATURE_SIZE["part"] + 1,
+        "is_correct": FEATURE_SIZE["is_correct"] + 1,
+        "is_on_time": FEATURE_SIZE["is_on_time"] + 1,
+        "elapsed_time": 0,
+        "lag_time": 0,
+    }
+
     MASK_VAL = {
-        "is_correct": 3,
-        "is_on_time": 3,
+        "qid": None,  # initialized in get_q_info_dic
+        "part": FEATURE_SIZE["part"] + 2,
+        "is_correct": FEATURE_SIZE["is_correct"] + 2,
+        "is_on_time": FEATURE_SIZE["is_on_time"] + 2,
         "elapsed_time": -1,
         "lag_time": -1,
     }

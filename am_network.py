@@ -5,7 +5,7 @@ from config import *
 
 
 class Model(torch.nn.Module):
-    def __init__(self, num_qs):
+    def __init__(self):
         super(Model, self).__init__()
 
         self.encoder = am_layers.Encoder(
@@ -15,7 +15,9 @@ class Model(torch.nn.Module):
         embed_position = am_layers.PositionalEncoding(
             ARGS.d_model, max_len=ARGS.max_seq_size
         )
-        embed_qid = am_layers.EmbeddingLayer(input_size=num_qs, embed_size=ARGS.d_model)
+        embed_qid = am_layers.EmbeddingLayer(
+            input_size=Const.FEATURE_SIZE["qid"], embed_size=ARGS.d_model
+        )
         embed_part = am_layers.EmbeddingLayer(input_size=8, embed_size=ARGS.d_model)
         embed_is_correct = am_layers.EmbeddingLayer(
             input_size=3, embed_size=ARGS.d_model
@@ -64,23 +66,13 @@ class Model(torch.nn.Module):
 
 
 class PretrainModel(Model):
-    def __init__(self, num_qs):
-        super(PretrainModel, self).__init__(num_qs)
+    def __init__(self):
+        super(PretrainModel, self).__init__()
         self.generator = torch.nn.ModuleDict(
-            {
-                target: am_layers.Generator(ARGS.d_model, 1)
-                for target in ARGS.gen_targets
-            }
+            {target: am_layers.Generator(ARGS.d_model, 1) for target in ARGS.targets}
         )
 
-    def forward(self, input_features):
-        if "elapsed_time" in input_features:
-            input_features["elapsed_time"] = input_features["elapsed_time"].unsqueeze(
-                -1
-            )
-        if "lag_time" in input_features:
-            input_features["lag_time"] = input_features["lag_time"].unsqueeze(-1)
-
+    def forward(self, input_features, padding_masks):
         # items that are not padded
         src_mask = (input_features["qid"] != 0).unsqueeze(-2)
 
@@ -99,19 +91,12 @@ class PretrainModel(Model):
 
 
 class ScoreModel(Model):
-    def __init__(self, num_qs):
-        super(ScoreModel, self).__init__(num_qs)
+    def __init__(self):
+        super(ScoreModel, self).__init__()
         self.lc_generator = am_layers.ScoreGenerator(ARGS.d_model)
         self.rc_generator = am_layers.ScoreGenerator(ARGS.d_model)
 
-    def forward(self, input_features):
-        if "elapsed_time" in input_features:
-            input_features["elapsed_time"] = input_features["elapsed_time"].unsqueeze(
-                -1
-            )
-        if "lag_time" in input_features:
-            input_features["lag_time"] = input_features["lag_time"].unsqueeze(-1)
-
+    def forward(self, input_features, padding_masks):
         # items that are not padded
         src_mask = (input_features["qid"] != 0).unsqueeze(-2)
 

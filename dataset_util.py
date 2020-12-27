@@ -1,5 +1,7 @@
 import csv
 
+from config import *
+
 
 def get_q_info_dic(q_info_path):
     q_info_dic = {}
@@ -8,4 +10,9 @@ def get_q_info_dic(q_info_path):
         for idx, row in enumerate(rows, start=1):
             row["dense_question_id"] = idx
             q_info_dic[int(row["question_id"])] = row
+
+    Const.FEATURE_SIZE["qid"] = len(q_info_dic)
+    Const.CLS_VAL["qid"] = len(q_info_dic) + 1
+    Const.MASK_VAL["qid"] = len(q_info_dic) + 2
+
     return q_info_dic

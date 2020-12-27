@@ -28,11 +28,11 @@ class FineTuneTrainer:
 
         for step, batch in enumerate(tqdm(dataloader)):
             batch_to_device(batch)
-            outputs = self._model(batch["input"])
-            lc_output, lc_sigmoid_output = outputs["lc"]
-            rc_output, rc_sigmoid_output = outputs["rc"]
-            lc_pred = lc_sigmoid_output * Const.SCORE_SCALING_FACTOR
-            rc_pred = rc_sigmoid_output * Const.SCORE_SCALING_FACTOR
+            outputs = self._model(batch["unmasked_feature"], batch["padding_mask"])
+            lc_logit, lc_output = outputs["lc"]
+            rc_logit, rc_output = outputs["rc"]
+            lc_pred = lc_output * Const.SCORE_SCALING_FACTOR
+            rc_pred = rc_output * Const.SCORE_SCALING_FACTOR
             total_pred = lc_pred + rc_pred
             lc_l1 = self._l1_loss(lc_pred, batch["label"]["lc"])
             rc_l1 = self._l1_loss(rc_pred, batch["label"]["rc"])
@@ -41,10 +41,10 @@ class FineTuneTrainer:
             batch_results["rc_l1"].extend(rc_l1.detach().cpu().numpy())
             batch_results["l1"].extend(l1.detach().cpu().numpy())
             lc_loss = self._bce_loss(
-                lc_output, batch["label"]["lc"] / Const.SCORE_SCALING_FACTOR
+                lc_logit, batch["label"]["lc"] / Const.SCORE_SCALING_FACTOR
             )
             rc_loss = self._bce_loss(
-                rc_output, batch["label"]["rc"] / Const.SCORE_SCALING_FACTOR
+                rc_logit, batch["label"]["rc"] / Const.SCORE_SCALING_FACTOR
             )
             batch_total_loss = lc_loss + rc_loss
             batch_results["loss"].append(batch_total_loss.item())
@@ -60,12 +60,6 @@ class FineTuneTrainer:
         lc_mae = np.mean(batch_results["lc_l1"])
         rc_mae = np.mean(batch_results["rc_l1"])
         mae = np.mean(batch_results["l1"])
-
-        if mode == "train" or mode == "val":
-            wandb_step = self._cur_epoch
-        elif mode == "test":
-            self._test_perf[cross_num] = mae
-            wandb_step = cross_num
 
         if mode == "val":
             if mae < self._best_val_perf[cross_num]:
@@ -84,6 +78,8 @@ class FineTuneTrainer:
             #         step=wandb_step,
             #         commit=False,
             #     )
+        elif mode == "test":
+            self._test_perf[cross_num] = mae
         print(
             f"{mode} {ARGS.downstream_task}_{cross_num} loss: {loss:.4f}, mae: {mae:.4f}, lc_mae: {lc_mae:.4f}, rc_mae: {rc_mae:.4f}"
         )

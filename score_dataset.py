@@ -119,7 +119,7 @@ def get_user_data(q_info_dic, user_inter_path, user_id_list):
                 qid = int(q_info_dic[qid]["dense_question_id"])
 
             # is_correct
-            is_correct = Const.TRUE_IDX if choice == correct_ans else Const.FALSE_IDX
+            is_correct = Const.TRUE_VAL if choice == correct_ans else Const.FALSE_VAL
 
             # part
             part = Const.UNKNOWN_PART if part == "unknown" else int(part)
@@ -130,9 +130,9 @@ def get_user_data(q_info_dic, user_inter_path, user_id_list):
                 q_info_dic[qid].get("time_limit_in_ms", Const.DEFAULT_TIME_LIMIT_IN_MS)
             )
             is_on_time = (
-                Const.TRUE_IDX
+                Const.TRUE_VAL
                 if elapsed_time_in_ms <= time_limit_in_ms
-                else Const.FALSE_IDX
+                else Const.FALSE_VAL
             )
             elapsed_time_in_s = elapsed_time_in_ms / 1000
             elapsed_time = min(elapsed_time_in_s / Const.MAX_ELAPSED_TIME_IN_S, 1)
@@ -168,7 +168,7 @@ def get_user_data(q_info_dic, user_inter_path, user_id_list):
 
 def preprocess_inters(inters, scores, aug_mode):
     # get input features
-    input_features = {name: np.array(inters[name]) for name in ARGS.gen_input_features}
+    input_features = {name: np.array(inters[name]) for name in ARGS.input_features}
 
     # get labels
     labels = scores
@@ -176,13 +176,19 @@ def preprocess_inters(inters, scores, aug_mode):
     # get augmented input features and truncate to max seq size
     augmented_features = get_augmented_features(input_features, aug_mode)
 
+    # get cls token appended augmented features
+    cls_appended_features = {
+        name: np.pad(feature, (1, 0), "constant", constant_values=Const.CLS_VAL[name])
+        for name, feature in augmented_features.items()
+    }
+
     # get zero padded input features
     padded_features, padding_masks = get_padded_features(
-        augmented_features, return_padding_mask=True
+        cls_appended_features, return_padding_mask=True
     )
 
     return {
-        "input": padded_features,
+        "unmasked_feature": padded_features,
         "label": labels,
         "padding_mask": padding_masks,
     }
@@ -191,34 +197,36 @@ def preprocess_inters(inters, scores, aug_mode):
 def get_augmented_features(features, aug_mode):
     if aug_mode == "no_aug":
         features = {
-            name: feature[-ARGS.max_seq_size :] for name, feature in features.items()
+            name: feature[-ARGS.max_seq_size + 1 :]
+            for name, feature in features.items()
         }
     elif aug_mode == "aug_only" or (
         aug_mode == "both" and np.random.random_sample() < ARGS.aug_sample_ratio
     ):
-        seq_size = len(list(features.values())[0])
+        seq_size = len(features["qid"])
         augmented_seq_size = int(seq_size * ARGS.aug_ratio)
         sampled_idxs = np.random.choice(seq_size, augmented_seq_size, replace=False)
         sorted_sampled_idxs = np.sort(sampled_idxs)
 
         features = {
-            name: feature[sorted_sampled_idxs][-ARGS.max_seq_size :]
+            name: feature[sorted_sampled_idxs][-ARGS.max_seq_size + 1 :]
             for name, feature in features.items()
         }
     else:
         features = {
-            name: feature[-ARGS.max_seq_size :] for name, feature in features.items()
+            name: feature[-ARGS.max_seq_size + 1 :]
+            for name, feature in features.items()
         }
 
     return features
 
 
 def get_padded_features(features, return_padding_mask):
-    seq_size = len(list(features.values())[0])
+    seq_size = len(features["qid"])
     num_pads = max(ARGS.max_seq_size - seq_size, 0)
     for name, feature in features.items():
         features[name] = np.pad(
-            feature, (0, num_pads), "constant", constant_values=Const.PAD_IDX
+            feature, (0, num_pads), "constant", constant_values=Const.PAD_VAL
         )
 
     padding_masks = None

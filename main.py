@@ -1,5 +1,6 @@
 import dataset_util, score_dataset, ednet_dataset
 from am_network import PretrainModel, ScoreModel
+from electra import ElectraAIEdPretrainModel, ElectraAIEdFinetuneModel
 from trainer import Trainer
 from finetune_trainer import FineTuneTrainer
 from config import *
@@ -29,12 +30,13 @@ if __name__ == "__main__":
 
     # get model
     if ARGS.model == "am":
-        pretrain_model = PretrainModel(num_qs=len(q_info_dic))
+        pretrain_model = PretrainModel()
         if ARGS.downstream_task == "score":
-            finetune_model = ScoreModel(num_qs=len(q_info_dic))
-
+            finetune_model = ScoreModel()
     elif ARGS.model == "electra":
-        ""
+        pretrain_model = ElectraAIEdPretrainModel()
+        if ARGS.downstream_task == "score":
+            finetune_model = ElectraAIEdFinetuneModel()
 
     finetune_trainer = FineTuneTrainer(finetune_model, finetune_dataloaders)
     trainer = Trainer(pretrain_model, pretrain_dataloaders, finetune_trainer)

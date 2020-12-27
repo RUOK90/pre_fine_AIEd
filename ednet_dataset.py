@@ -2,7 +2,6 @@ import pickle as pkl
 import numpy as np
 import torch
 from torch.utils import data
-import torch.nn.functional as F
 
 from config import *
 
@@ -90,21 +89,37 @@ def preprocess_inters(inters, window_idx):
 
     # get all configured features
     start_idx = window_idx
-    end_idx = start_idx + ARGS.max_seq_size
+    end_idx = start_idx + ARGS.max_seq_size - 1  # -1 for cls
     all_features = {
         name: np.array(ednet_features[name][start_idx:end_idx])
         for name in ARGS.all_features
     }
 
-    # get generator input features
-    masked_features, input_masks = get_masked_input_features(all_features)
+    # get cls token appended all_features
+    cls_appended_all_features = {
+        name: np.pad(feature, (1, 0), "constant", constant_values=Const.CLS_VAL[name])
+        for name, feature in all_features.items()
+    }
+
+    # get unmasked input features
+    unmasked_features = {
+        name: cls_appended_all_features[name] for name in ARGS.input_features
+    }
+
+    # get masked input features
+    masked_features, input_masks = get_masked_input_features(unmasked_features)
 
     # get labels
-    labels = get_labels(all_features)
+    labels = get_labels(cls_appended_all_features)
 
-    # get zero padded generator input features
-    padded_features, padding_masks = get_padded_features(
-        masked_features, return_padding_mask=True
+    # get zero padded unmasked input features
+    padded_unmasked_features, padding_masks = get_padded_features(
+        unmasked_features, return_padding_mask=True
+    )
+
+    # get zero padded masked input features
+    padded_masked_features, _ = get_padded_features(
+        masked_features, return_padding_mask=False
     )
 
     # get zero padded input masks
@@ -113,10 +128,11 @@ def preprocess_inters(inters, window_idx):
     # get zero padded labels
     padded_labels, _ = get_padded_features(labels, return_padding_mask=False)
 
-    seq_size = len(list(all_features.values())[0])
+    seq_size = len(cls_appended_all_features["qid"])
 
     return {
-        "input": padded_features,
+        "unmasked_feature": padded_unmasked_features,
+        "masked_feature": padded_masked_features,
         "label": padded_labels,
         "input_mask": padded_input_masks,
         "padding_mask": padding_masks,
@@ -126,13 +142,13 @@ def preprocess_inters(inters, window_idx):
 
 def get_masked_input_features(features):
     masked_input_features = {}
-    seq_size = len(list(features.values())[0])
+    seq_size = len(features["qid"])
     masks = np.random.random_sample(seq_size) < ARGS.random_mask_ratio  # True: mask
     for name, feature in features.items():
-        if name in ARGS.gen_masked_features:
+        if name in ARGS.masked_features:
             masked_feature = feature * (1 - masks) + masks * Const.MASK_VAL[name]
             masked_input_features[name] = masked_feature
-        elif name in ARGS.gen_input_features:
+        else:
             masked_input_features[name] = feature
 
     return masked_input_features, masks
@@ -141,25 +157,21 @@ def get_masked_input_features(features):
 def get_labels(features):
     labels = {}
     for name, feature in features.items():
-        if name in ARGS.gen_targets:
-            if name == "is_correct":
-                labels[name] = 2 - feature
-            elif name == "is_on_time":
-                labels[name] = 2 - feature
-            elif name == "elapsed_time":
-                labels[name] = feature
-            elif name == "lag_time":
+        if name in ARGS.targets:
+            if name in Const.CATE_VARS:
+                labels[name] = feature - 1
+            elif name in Const.CONT_VARS:
                 labels[name] = feature
 
     return labels
 
 
 def get_padded_features(features, return_padding_mask):
-    seq_size = len(list(features.values())[0])
+    seq_size = len(features["qid"])
     num_pads = max(ARGS.max_seq_size - seq_size, 0)
     for name, feature in features.items():
         features[name] = np.pad(
-            feature, (0, num_pads), "constant", constant_values=Const.PAD_IDX
+            feature, (0, num_pads), "constant", constant_values=Const.PAD_VAL
         )
 
     padding_masks = None
@@ -178,7 +190,7 @@ def get_padded_masks(masks):
     seq_size = len(masks)
     num_pads = max(ARGS.max_seq_size - seq_size, 0)
     padded_masks = np.pad(
-        masks, (0, num_pads), "constant", constant_values=Const.PAD_IDX
+        masks, (0, num_pads), "constant", constant_values=Const.PAD_VAL
     )
 
     return padded_masks
