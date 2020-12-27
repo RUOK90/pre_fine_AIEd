@@ -243,8 +243,7 @@ def get_args():
     # args.wandb_name = args.wandb_name.rstrip("-")
     # args.wandb_name += f"_{args.optim}_{args.aug_mode}"
     #
-    # args.wandb_name = f"finetune_only_{args.optim}_{args.aug_mode}"
-    args.wandb_name = f"electra"
+    args.wandb_name = f"finetune_only_{args.finetune_output_func}"
 
     # parse tags
     args.wandb_tags = (
