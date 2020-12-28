@@ -18,7 +18,7 @@ def get_dataloaders(q_info_dic, pretrain_base_path):
     train_dataset = EdNetDataSet(q_info_dic, train_user_inter_path, train_user_windows)
     train_dataloader = data.DataLoader(
         dataset=train_dataset,
-        batch_size=ARGS.train_batch_size,
+        batch_size=ARGS.pretrain_train_batch_size,
         shuffle=True,
         num_workers=ARGS.num_workers,
     )
@@ -27,7 +27,7 @@ def get_dataloaders(q_info_dic, pretrain_base_path):
     val_dataset = EdNetDataSet(q_info_dic, val_user_inter_path, val_user_windows)
     val_dataloader = data.DataLoader(
         dataset=val_dataset,
-        batch_size=ARGS.test_batch_size,
+        batch_size=ARGS.pretrain_test_batch_size,
         shuffle=False,
         num_workers=ARGS.num_workers,
     )

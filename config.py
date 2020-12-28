@@ -87,8 +87,10 @@ def get_arg_parser():
     train_args.add_argument("--num_cross_folds", type=int, default=5)
     train_args.add_argument("--min_seq_size", type=int, default=11)  # +1 for cls
     train_args.add_argument("--max_seq_size", type=int, default=101)  # +1 for cls
-    train_args.add_argument("--train_batch_size", type=int, default=1024)
-    train_args.add_argument("--test_batch_size", type=int, default=2048)
+    train_args.add_argument("--pretrain_train_batch_size", type=int, default=1024)
+    train_args.add_argument("--pretrain_test_batch_size", type=int, default=2048)
+    train_args.add_argument("--finetune_train_batch_size", type=int, default=256)
+    train_args.add_argument("--finetune_test_batch_size", type=int, default=2048)
     train_args.add_argument(
         "--optim", type=str, choices=["scheduled", "noam"], default="scheduled"
     )
@@ -249,8 +251,10 @@ def get_args():
         args.num_cross_folds = 1
         args.score_base_path = "/private/datasets/LAK21_AM/score_data_debug/14d_10q"
         args.pretrain_base_path = "/private/datasets/LAK21_AM/load_debug"
-        args.train_batch_size = 4
-        args.test_batch_size = 4
+        args.pretrain_train_batch_size = 4
+        args.pretrain_test_batch_size = 4
+        args.finetune_train_batch_size = 4
+        args.finetune_test_batch_size = 4
         args.num_pretrain_epochs = 5
         args.num_finetune_epochs = 5
 

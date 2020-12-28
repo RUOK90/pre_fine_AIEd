@@ -31,7 +31,7 @@ def get_dataloaders(q_info_dic, score_base_path):
         )
         train_dataloader = data.DataLoader(
             dataset=train_dataset,
-            batch_size=ARGS.train_batch_size,
+            batch_size=ARGS.finetune_train_batch_size,
             shuffle=True,
             num_workers=ARGS.num_workers,
         )
@@ -41,7 +41,7 @@ def get_dataloaders(q_info_dic, score_base_path):
         )
         val_dataloader = data.DataLoader(
             dataset=val_dataset,
-            batch_size=ARGS.test_batch_size,
+            batch_size=ARGS.finetune_test_batch_size,
             shuffle=False,
             num_workers=ARGS.num_workers,
         )
@@ -51,7 +51,7 @@ def get_dataloaders(q_info_dic, score_base_path):
         )
         test_dataloader = data.DataLoader(
             dataset=test_dataset,
-            batch_size=ARGS.test_batch_size,
+            batch_size=ARGS.finetune_test_batch_size,
             shuffle=False,
             num_workers=ARGS.num_workers,
         )
