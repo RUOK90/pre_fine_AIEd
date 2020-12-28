@@ -26,6 +26,7 @@ class Trainer:
     def _pretrain(self, dataloader, mode):
         total_gen_target_cnt = 0
         total_dis_target_cnt = 0
+        # results for generator
         batch_results = {
             target: {
                 "loss": [],
@@ -33,6 +34,13 @@ class Trainer:
                 "l1": [],
             }
             for target in ARGS.targets
+        }
+        # results for discriminator
+        batch_results["dis"] = {
+            "loss": [],
+            "n_corrects": 0,
+            "output": [],
+            "label": [],
         }
 
         for step, batch in enumerate(tqdm(dataloader)):
@@ -75,12 +83,6 @@ class Trainer:
             # for discriminator outputs
             if dis_outputs is not None:
                 total_dis_target_cnt += (~batch["padding_mask"]).sum().item()
-                batch_results["dis"] = {
-                    "loss": [],
-                    "n_corrects": 0,
-                    "output": [],
-                    "label": [],
-                }
                 label = dis_labels.masked_select(~batch["padding_mask"])
                 logit = dis_outputs[0].masked_select(~batch["padding_mask"])
                 output = dis_outputs[1].masked_select(~batch["padding_mask"])
@@ -137,6 +139,9 @@ class Trainer:
                 wandb_log_dict[f"{mode} dis loss"] = loss
                 wandb_log_dict[f"{mode} dis acc"] = acc
                 wandb_log_dict[f"{mode} dis auc"] = auc
+                wandb_log_dict[f"{mode} dis label"] = np.mean(
+                    batch_results["dis"]["label"]
+                )
                 wandb.log(wandb_log_dict, step=self._cur_epoch)
 
     def _train(self):
