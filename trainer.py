@@ -68,7 +68,7 @@ class Trainer:
                     if ARGS.time_loss == "bce":
                         loss = self._bce_loss(logit, label)
                     elif ARGS.time_loss == "mse":
-                        loss = self._mse_loss(output, label)
+                        loss = ARGS.time_loss_lambda * self._mse_loss(output, label)
                 gen_total_loss += loss
                 batch_results[target]["loss"].append(loss.item())
 
@@ -97,7 +97,7 @@ class Trainer:
             if self._pretrain_model.training:
                 if step / len(dataloader) > ARGS.cut_point:
                     break
-                self._optim.update(gen_total_loss + ARGS.loss_lambda * dis_loss)
+                self._optim.update(gen_total_loss + ARGS.dis_lambda * dis_loss)
 
             if ARGS.debug_mode and step == 4:
                 break

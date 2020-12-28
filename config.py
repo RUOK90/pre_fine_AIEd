@@ -106,6 +106,7 @@ def get_arg_parser():
         choices=["no_aug", "aug_only", "both"],
         default="aug_only",
     )
+    train_args.add_argument("--time_loss_lambda", type=float, default=1)
     train_args.add_argument(
         "--time_output_func",
         type=str,
@@ -188,7 +189,7 @@ def get_arg_parser():
     model_args.add_argument("--num_heads", type=int, default=8)
     model_args.add_argument("--dropout", type=float, default=0.2)
     # ELECTRA
-    model_args.add_argument("--loss_lambda", type=int, default=1)
+    model_args.add_argument("--dis_lambda", type=int, default=1)
     model_args.add_argument("--embedding_size", type=int, default=256)
     model_args.add_argument("--hidden_size", type=int, default=256)
     model_args.add_argument(
@@ -231,7 +232,7 @@ def get_args():
     if "lag_time" in args.targets:
         args.wandb_name += "lt-"
     args.wandb_name = args.wandb_name.rstrip("-") + "_"
-    args.wandb_name += args.finetune_output_func
+    args.wandb_name += f"{args.finetune_output_func}_{args.time_loss_lambda}"
 
     # parse tags
     args.wandb_tags = (
