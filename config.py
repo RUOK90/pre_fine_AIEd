@@ -108,6 +108,18 @@ def get_arg_parser():
         choices=["no_aug", "aug_only", "both"],
         default="aug_only",
     )
+    train_args.add_argument(
+        "--gen_cate_target_sampling",
+        type=str,
+        choices=["none", "categorical"],
+        default="categorical",
+    )
+    train_args.add_argument(
+        "--gen_cont_target_sampling",
+        type=str,
+        choices=["none", "normal"],
+        default="normal",
+    )
     train_args.add_argument("--time_loss_lambda", type=float, default=1)
     train_args.add_argument(
         "--time_output_func",
@@ -124,13 +136,18 @@ def get_arg_parser():
         choices=["mean", "cls"],
         default="mean",
     )
-
     train_args.add_argument(
         "--train_mode",
         type=str,
-        choices=["pretrain_only", "finetune_only", "both"],
+        choices=[
+            "pretrain_only",
+            "finetune_only",
+            "finetune_only_from_pretrained_weight",
+            "both",
+        ],
         default="both",
     )
+    train_args.add_argument("--pretrained_weight_epoch", type=int, default=2)
     train_args.add_argument(
         "--input_features",
         type=str,
@@ -183,25 +200,70 @@ def get_arg_parser():
     #################### Model args ####################
     model_args = parser.add_argument_group("Model args")
     model_args.add_argument(
-        "--model", type=str, choices=["am", "bert", "electra"], default="electra"
+        "--model",
+        type=str,
+        choices=["am", "bert", "electra", "electra-reformer"],
+        default="electra",
     )
-    # AM
-    model_args.add_argument("--num_layers", type=int, default=2)
-    model_args.add_argument("--d_model", type=int, default=256)
-    model_args.add_argument("--num_heads", type=int, default=8)
-    model_args.add_argument("--dropout", type=float, default=0.2)
-    # ELECTRA
-    model_args.add_argument("--dis_lambda", type=int, default=1)
-    model_args.add_argument("--embedding_size", type=int, default=256)
-    model_args.add_argument("--hidden_size", type=int, default=256)
-    model_args.add_argument(
-        "--intermediate_size", type=int, default=1024
-    )  # 4 * hidden_size
-    model_args.add_argument("--num_hidden_layers", type=int, default=2)
-    model_args.add_argument("--num_attention_heads", type=int, default=8)
-    model_args.add_argument("--hidden_act", type=str, default="gelu")
-    model_args.add_argument("--hidden_dropout_prob", type=float, default=0.1)
-    model_args.add_argument("--attention_probs_dropout_prob", type=float, default=0.1)
+    model = parser.parse_args().model
+    if model == "am":
+        model_args.add_argument("--num_layers", type=int, default=2)
+        model_args.add_argument("--d_model", type=int, default=256)
+        model_args.add_argument("--num_heads", type=int, default=8)
+        model_args.add_argument("--dropout", type=float, default=0.2)
+    elif model == "electra":
+        model_args.add_argument("--dis_lambda", type=int, default=1)
+        model_args.add_argument("--embedding_size", type=int, default=256)
+        model_args.add_argument("--hidden_size", type=int, default=256)
+        model_args.add_argument(
+            "--intermediate_size", type=int, default=1024
+        )  # 4 * hidden_size
+        model_args.add_argument("--num_hidden_layers", type=int, default=2)
+        model_args.add_argument("--num_attention_heads", type=int, default=8)
+        model_args.add_argument("--hidden_act", type=str, default="gelu")
+        model_args.add_argument("--hidden_dropout_prob", type=float, default=0.1)
+        model_args.add_argument(
+            "--attention_probs_dropout_prob", type=float, default=0.1
+        )
+    elif model == "electra-reformer":
+        model_args.add_argument("--axial_pos_embds", type=str2bool, default=True)
+        model_args.add_argument(
+            "--axial_pos_shape", type=int, nargs="+", default=[64, 64]
+        )
+        model_args.add_argument(
+            "--axial_pos_embds_dim", type=int, nargs="+", default=[64, 192]
+        )
+        model_args.add_argument("--hidden_size", type=int, default=256)
+        model_args.add_argument(
+            "--hidden_act", type=str, choices=["relu", "gelu"], default="relu"
+        )
+        model_args.add_argument("--hidden_dropout_prob", type=float, default=0.05)
+        model_args.add_argument("--feed_forward_size", type=int, default=512)
+        model_args.add_argument("--attention_head_size", type=int, default=64)
+        model_args.add_argument(
+            "--attn_layers",
+            type=str,
+            choices=["local", "lsh"],
+            nargs="+",
+            default=["local", "lsh", "local", "lsh", "local", "lsh"],
+        )
+        model_args.add_argument("--num_attention_heads", type=int, default=12)
+        model_args.add_argument("--local_attn_chunk_length", type=int, default=64)
+        model_args.add_argument(
+            "--local_attention_probs_dropout_prob", type=float, default=0.05
+        )
+        model_args.add_argument("--local_num_chunks_before", type=int, default=1)
+        model_args.add_argument("--local_num_chunks_after", type=int, default=0)
+        model_args.add_argument("--lsh_attn_chunk_length", type=int, default=64)
+        model_args.add_argument(
+            "--lsh_attention_probs_dropout_prob", type=float, default=0
+        )
+        model_args.add_argument("--lsh_num_chunks_before", type=int, default=1)
+        model_args.add_argument("--lsh_num_chunks_after", type=int, default=0)
+        model_args.add_argument("--num_hashes", type=int, default=1)
+        model_args.add_argument("--num_buckets", default=None)
+        model_args.add_argument("--is_decoder", type=str2bool, default=False)
+        model_args.add_argument("--use_cache", type=str2bool, default=False)
 
     return parser
 
@@ -233,8 +295,12 @@ def get_args():
         args.wandb_name += "et-"
     if "lag_time" in args.targets:
         args.wandb_name += "lt-"
-    args.wandb_name = args.wandb_name.rstrip("-") + "_"
-    args.wandb_name += f"{args.finetune_output_func}_{args.time_loss_lambda}"
+    args.wandb_name = args.wandb_name.rstrip("-")
+    args.wandb_name += (
+        f"_{args.gen_cate_target_sampling}_{args.gen_cont_target_sampling}"
+    )
+    if gen_cont_target_sampling == "none":
+        args.wandb_name += f"_{args.time_output_func}_{args.time_loss}"
 
     # parse tags
     args.wandb_tags = (
@@ -257,6 +323,7 @@ def get_args():
         args.finetune_test_batch_size = 4
         args.num_pretrain_epochs = 5
         args.num_finetune_epochs = 5
+        args.wandb_name = "debug"
 
     # wandb
     if args.use_wandb:

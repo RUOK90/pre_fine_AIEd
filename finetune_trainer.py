@@ -22,6 +22,8 @@ class FineTuneTrainer:
         self._best_val_perf = None
         self._test_perf = None
         self._finetuned_weight_path = None
+        self._val_best_renewal = False
+        self._pretrain_best_val_perfs = []
 
     def _score_forward(self, dataloader, cross_num, mode, pretrain_epoch):
         batch_results = {"loss": [], "l1": [], "lc_l1": [], "rc_l1": []}
@@ -64,9 +66,7 @@ class FineTuneTrainer:
         if mode == "val":
             if mae < self._best_val_perf[cross_num]:
                 self._best_val_perf[cross_num] = mae
-                # save model
-                self._finetuned_weight_path = f"{ARGS.weight_path}/{ARGS.downstream_task}_{pretrain_epoch}_{cross_num}.pt"
-                torch.save(self._model.state_dict(), self._finetuned_weight_path)
+                self._val_best_renewal = True
 
             # if ARGS.use_wandb:
             #     wandb.log(
@@ -80,6 +80,7 @@ class FineTuneTrainer:
             #     )
         elif mode == "test":
             self._test_perf[cross_num] = mae
+
         print(
             f"{mode} {ARGS.downstream_task}_{cross_num} loss: {loss:.4f}, mae: {mae:.4f}, lc_mae: {lc_mae:.4f}, rc_mae: {rc_mae:.4f}"
         )
@@ -96,9 +97,11 @@ class FineTuneTrainer:
         #         commit=False,
         #     )
 
-    def _train(self, pretrained_weight_path, pretrain_epoch):
-        self._best_val_perf = [np.inf for i in range(ARGS.num_cross_folds)]
-        self._test_perf = [np.inf for i in range(ARGS.num_cross_folds)]
+    def _train(self, pretrained_weight_path, pretrain_epoch, do_test):
+        if ARGS.downstream_task == "score":
+            self._best_val_perf = [np.inf for i in range(ARGS.num_cross_folds)]
+            self._test_perf = [np.inf for i in range(ARGS.num_cross_folds)]
+
         for cross_num, dataloaders in self._dataloaders.items():
             set_random_seed(ARGS.random_seed)
             self._model = load_pretrained_weight(
@@ -122,35 +125,58 @@ class FineTuneTrainer:
                         dataloaders["val"], cross_num, "val", pretrain_epoch
                     )
 
+                # save model
+                if do_test and self._val_best_renewal:
+                    self._finetuned_weight_path = f"{ARGS.weight_path}/{ARGS.downstream_task}_{pretrain_epoch}_{cross_num}.pt"
+                    torch.save(self._model.state_dict(), self._finetuned_weight_path)
+                    self._val_best_renewal = False
+                    print("save!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+
             # test
-            with torch.no_grad():
-                self._model.load_state_dict(torch.load(self._finetuned_weight_path))
-                self._model.eval()
-                self._score_forward(
-                    dataloaders["test"], cross_num, "test", pretrain_epoch
-                )
+            if do_test:
+                with torch.no_grad():
+                    self._model.load_state_dict(torch.load(self._finetuned_weight_path))
+                    self._model.eval()
+                    self._score_forward(
+                        dataloaders["test"], cross_num, "test", pretrain_epoch
+                    )
 
         # mean over cross validation split print and wandb output
+        # print val outputs
         finetune_mean_best_val_perf = np.mean(self._best_val_perf)
-        finetune_mean_test_perf = np.mean(self._test_perf)
-
+        self._pretrain_best_val_perfs.append(finetune_mean_best_val_perf)
         print(
-            f"mean_best_{ARGS.downstream_task}_val_perf: {finetune_mean_best_val_perf}, mean_{ARGS.downstream_task}_test_perf: {finetune_mean_test_perf}"
+            f"mean_best_{ARGS.downstream_task}_val_perf: {finetune_mean_best_val_perf}"
         )
-
         if ARGS.use_wandb:
             wandb_log_dict = {}
             for i in range(ARGS.num_cross_folds):
                 wandb_log_dict[
                     f"{i}_best_{ARGS.downstream_task}_val_perf"
                 ] = self._best_val_perf[i]
-                wandb_log_dict[
-                    f"{i}_{ARGS.downstream_task}_test_perf"
-                ] = self._test_perf[i]
             wandb_log_dict[
                 f"mean_best_{ARGS.downstream_task}_val_perf"
             ] = finetune_mean_best_val_perf
-            wandb_log_dict[
-                f"mean_{ARGS.downstream_task}_test_perf"
-            ] = finetune_mean_test_perf
-            wandb.log(wandb_log_dict, step=pretrain_epoch)
+            if (
+                ARGS.train_mode == "finetune_only_from_pretrained_weight"
+                and ARGS.pretrained_weight_epoch != -1
+            ):
+                wandb_step = 0
+            else:
+                wandb_step = pretrain_epoch
+            wandb.log(wandb_log_dict, step=wandb_step)
+
+        # print test outputs
+        if do_test:
+            finetune_mean_test_perf = np.mean(self._test_perf)
+            print(f"mean_{ARGS.downstream_task}_test_perf: {finetune_mean_test_perf}")
+            if ARGS.use_wandb:
+                wandb_log_dict = {}
+                for i in range(ARGS.num_cross_folds):
+                    wandb_log_dict[
+                        f"{i}_{ARGS.downstream_task}_test_perf"
+                    ] = self._test_perf[i]
+                wandb_log_dict[
+                    f"mean_{ARGS.downstream_task}_test_perf"
+                ] = finetune_mean_test_perf
+                wandb.log(wandb_log_dict, step=0)

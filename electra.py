@@ -1,4 +1,8 @@
+from torch.distributions.categorical import Categorical
+from torch.distributions.normal import Normal
+import torch.nn.functional as F
 from transformers.models.electra.modeling_electra import *
+from modeling_reformer import *
 from config import *
 
 
@@ -6,29 +10,74 @@ class ElectraAIEdPretrainModel(nn.Module):
     def __init__(self):
         super(ElectraAIEdPretrainModel, self).__init__()
         # set config
-        gen_config = ElectraConfig()
-        gen_config.embedding_size = ARGS.embedding_size
-        gen_config.hidden_size = int(ARGS.hidden_size / 4)
-        gen_config.intermediate_size = int(ARGS.intermediate_size / 4)
-        gen_config.num_hidden_layers = ARGS.num_hidden_layers
-        gen_config.num_attention_heads = int(ARGS.num_attention_heads / 4)
-        gen_config.hidden_act = ARGS.hidden_act
-        gen_config.hidden_dropout_prob = ARGS.hidden_dropout_prob
-        gen_config.attention_probs_dropout_prob = ARGS.attention_probs_dropout_prob
-        gen_config.pad_token_id = Const.PAD_VAL
-        gen_config.max_position_embeddings = ARGS.max_seq_size
+        if ARGS.model == "electra":
+            dis_config = ElectraConfig()
+            dis_config.embedding_size = ARGS.embedding_size
+            dis_config.hidden_size = ARGS.hidden_size
+            dis_config.intermediate_size = ARGS.intermediate_size
+            dis_config.num_hidden_layers = ARGS.num_hidden_layers
+            dis_config.num_attention_heads = ARGS.num_attention_heads
+            dis_config.hidden_act = ARGS.hidden_act
+            dis_config.hidden_dropout_prob = ARGS.hidden_dropout_prob
+            dis_config.attention_probs_dropout_prob = ARGS.attention_probs_dropout_prob
+            dis_config.pad_token_id = Const.PAD_VAL
+            dis_config.max_position_embeddings = ARGS.max_seq_size
 
-        dis_config = ElectraConfig()
-        dis_config.embedding_size = ARGS.embedding_size
-        dis_config.hidden_size = ARGS.hidden_size
-        dis_config.intermediate_size = ARGS.intermediate_size
-        dis_config.num_hidden_layers = ARGS.num_hidden_layers
-        dis_config.num_attention_heads = ARGS.num_attention_heads
-        dis_config.hidden_act = ARGS.hidden_act
-        dis_config.hidden_dropout_prob = ARGS.hidden_dropout_prob
-        dis_config.attention_probs_dropout_prob = ARGS.attention_probs_dropout_prob
-        dis_config.pad_token_id = Const.PAD_VAL
-        dis_config.max_position_embeddings = ARGS.max_seq_size
+            gen_config = ElectraConfig()
+            gen_config.embedding_size = ARGS.embedding_size
+            gen_config.hidden_size = int(ARGS.hidden_size / 4)
+            gen_config.intermediate_size = int(ARGS.intermediate_size / 4)
+            gen_config.num_hidden_layers = ARGS.num_hidden_layers
+            gen_config.num_attention_heads = int(ARGS.num_attention_heads / 4)
+            gen_config.hidden_act = ARGS.hidden_act
+            gen_config.hidden_dropout_prob = ARGS.hidden_dropout_prob
+            gen_config.attention_probs_dropout_prob = ARGS.attention_probs_dropout_prob
+            gen_config.pad_token_id = Const.PAD_VAL
+            gen_config.max_position_embeddings = ARGS.max_seq_size
+
+        elif ARGS.model == "electra-reformer":
+            dis_config = ReformerConfig()
+            dis_config.embedding_size = ARGS.hidden_size
+            dis_config.axial_pos_embds = ARGS.axial_pos_embds
+            dis_config.axial_pos_shape = tuple(ARGS.axial_pos_shape)
+            dis_config.axial_pos_embds_dim = tuple(ARGS.axial_pos_embds_dim)
+            dis_config.hidden_size = ARGS.hidden_size
+            dis_config.hidden_act = ARGS.hidden_act
+            dis_config.hidden_dropout_prob = ARGS.hidden_dropout_prob
+            dis_config.feed_forward_size = ARGS.feed_forward_size
+            dis_config.attention_head_size = ARGS.attention_head_size
+            dis_config.attn_layers = ARGS.attn_layers
+            dis_config.num_attention_heads = ARGS.num_attention_heads
+            dis_config.local_attn_chunk_length = ARGS.local_attn_chunk_length
+            dis_config.local_attention_probs_dropout_prob = (
+                ARGS.local_attention_probs_dropout_prob
+            )
+            dis_config.local_num_chunks_before = ARGS.local_num_chunks_before
+            dis_config.local_num_chunks_after = ARGS.local_num_chunks_after
+            dis_config.lsh_attn_chunk_length = ARGS.lsh_attn_chunk_length
+            dis_config.lsh_attention_probs_dropout_prob = (
+                ARGS.lsh_attention_probs_dropout_prob
+            )
+            dis_config.lsh_num_chunks_before = ARGS.lsh_num_chunks_before
+            dis_config.lsh_num_chunks_after = ARGS.lsh_num_chunks_after
+            dis_config.num_hashes = ARGS.num_hashes
+            dis_config.num_buckets = ARGS.num_buckets
+            dis_config.is_decoder = ARGS.is_decoder
+            dis_config.use_cache = ARGS.use_cache
+            dis_config.pad_token_id = Const.PAD_VAL
+            dis_config.max_position_embeddings = ARGS.max_seq_size
+
+            # gen_config = ElectraConfig()
+            # gen_config.embedding_size = ARGS.embedding_size
+            # gen_config.hidden_size = int(ARGS.hidden_size / 4)
+            # gen_config.intermediate_size = int(ARGS.intermediate_size / 4)
+            # gen_config.num_hidden_layers = ARGS.num_hidden_layers
+            # gen_config.num_attention_heads = int(ARGS.num_attention_heads / 4)
+            # gen_config.hidden_act = ARGS.hidden_act
+            # gen_config.hidden_dropout_prob = ARGS.hidden_dropout_prob
+            # gen_config.attention_probs_dropout_prob = ARGS.attention_probs_dropout_prob
+            # gen_config.pad_token_id = Const.PAD_VAL
+            # gen_config.max_position_embeddings = ARGS.max_seq_size
 
         self.embeds = ElectraAIEdEmbeddings(dis_config)
         self.gen_model = ElectraAIEdMaskedLM(gen_config)
@@ -105,11 +154,20 @@ class ElectraAIEdMaskedLM(ElectraPreTrainedModel):
                 )
                 heads_dict[f"{target}_output_head"] = nn.Softmax(dim=-1)
             elif target in Const.CONT_VARS:
-                heads_dict[f"{target}_logit_head"] = nn.Linear(config.embedding_size, 1)
-                if ARGS.time_output_func == "identity":
+                if ARGS.gen_cont_target_sampling == "normal":
+                    heads_dict[f"{target}_logit_head"] = nn.Linear(
+                        config.embedding_size, 2
+                    )
                     heads_dict[f"{target}_output_head"] = nn.Identity()
-                elif ARGS.time_output_func == "sigmoid":
-                    heads_dict[f"{target}_output_head"] = nn.Sigmoid()
+                elif ARGS.gen_cont_target_sampling == "none":
+                    heads_dict[f"{target}_logit_head"] = nn.Linear(
+                        config.embedding_size, 1
+                    )
+                    if ARGS.time_output_func == "identity":
+                        heads_dict[f"{target}_output_head"] = nn.Identity()
+                    elif ARGS.time_output_func == "sigmoid":
+                        heads_dict[f"{target}_output_head"] = nn.Sigmoid()
+
         self.heads = torch.nn.ModuleDict(heads_dict)
 
         self.init_weights()
@@ -150,14 +208,26 @@ class ElectraAIEdMaskedLM(ElectraPreTrainedModel):
         for target in ARGS.targets:
             if target in Const.CATE_VARS:
                 logit = self.heads[f"{target}_logit_head"](prediction_scores)
-                output = (
-                    logit.max(dim=-1)[1] + 1
-                )  # +1 since the var starts from 1, not 0 (we don't user softmax)
+                if ARGS.gen_cate_target_sampling == "categorical":
+                    output = (
+                        Categorical(self.heads[f"{target}_output_head"](logit)).sample()
+                        + 1
+                    )  # +1 since the var starts from 1, not 0
+                elif ARGS.gen_cate_target_sampling == "none":
+                    output = (
+                        logit.max(dim=-1)[1] + 1
+                    )  # +1 since the var starts from 1, not 0
             elif target in Const.CONT_VARS:
                 logit = self.heads[f"{target}_logit_head"](prediction_scores).squeeze(
                     -1
                 )
-                output = self.heads[f"{target}_output_head"](logit).squeeze(-1)
+                if ARGS.gen_cont_target_sampling == "normal":
+                    mu = logit[:, :, 0]
+                    std = F.softplus(logit[:, :, 1])
+                    logit = (mu, std)
+                    output = torch.clamp(Normal(mu, std).sample(), min=0, max=1)
+                elif ARGS.gen_cont_target_sampling == "none":
+                    output = self.heads[f"{target}_output_head"](logit).squeeze(-1)
             outputs[target] = (logit, output)
 
         return outputs
@@ -170,7 +240,10 @@ class ElectraAIEdModel(ElectraPreTrainedModel):
             self.embeddings_project = nn.Linear(
                 config.embedding_size, config.hidden_size
             )
-        self.encoder = ElectraEncoder(config)
+        if ARGS.model == "electra":
+            self.encoder = ElectraEncoder(config)
+        elif ARGS.model == "electra-reformer":
+            self.encoder = ReformerEncoder(config)
         self.config = config
         self.init_weights()
 

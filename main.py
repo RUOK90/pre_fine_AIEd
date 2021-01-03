@@ -22,7 +22,10 @@ if __name__ == "__main__":
         pretrain_dataloaders = ednet_dataset.get_dataloaders(
             q_info_dic, ARGS.pretrain_base_path
         )
-    elif ARGS.train_mode == "finetune_only":
+    elif (
+        ARGS.train_mode == "finetune_only"
+        or ARGS.train_mode == "finetune_only_from_pretrained_weight"
+    ):
         if ARGS.downstream_task == "score":
             finetune_dataloaders = score_dataset.get_dataloaders(
                 q_info_dic, ARGS.score_base_path

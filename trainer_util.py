@@ -26,7 +26,7 @@ def get_optimizer(model, optimizer):
     if optimizer == "scheduled":
         adam = optim.Adam(params=model.parameters(), lr=ARGS.lr)
         return ScheduledOpt(
-            optimizer=adam, d_model=ARGS.d_model, n_warmup_steps=ARGS.warmup_steps
+            optimizer=adam, d_model=ARGS.hidden_size, n_warmup_steps=ARGS.warmup_steps
         )
     elif optimizer == "noam":
         adam = optim.Adam(
@@ -36,7 +36,10 @@ def get_optimizer(model, optimizer):
             eps=1e-09,
         )
         return NoamOpt(
-            model_size=ARGS.d_model, factor=1, warmup=ARGS.warmup_steps, optimizer=adam
+            model_size=ARGS.hidden_size,
+            factor=1,
+            warmup=ARGS.warmup_steps,
+            optimizer=adam,
         )
 
 
