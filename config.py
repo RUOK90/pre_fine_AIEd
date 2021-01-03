@@ -299,7 +299,7 @@ def get_args():
     args.wandb_name += (
         f"_{args.gen_cate_target_sampling}_{args.gen_cont_target_sampling}"
     )
-    if gen_cont_target_sampling == "none":
+    if args.gen_cont_target_sampling == "none":
         args.wandb_name += f"_{args.time_output_func}_{args.time_loss}"
 
     # parse tags
