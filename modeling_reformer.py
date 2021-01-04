@@ -1668,6 +1668,7 @@ class ChunkReformerFeedForward(nn.Module):
 class ReformerLayer(nn.Module):
     def __init__(self, config, layer_id=0):
         super().__init__()
+        self.config = config  # bskim's modification for deterministic calculation
         self.attention = ReformerAttention(config, layer_id)
         # dropout requires to have the same
         # seed for forward and backward pass
@@ -1676,7 +1677,20 @@ class ReformerLayer(nn.Module):
 
         self.feed_forward = ChunkReformerFeedForward(config)
 
-    def _init_attention_seed(self):
+    def _init_attention_seed(
+        self,
+    ):  # bskim's modification for deterministic calculation
+        self.attention_seed = self.config.reformer_seed
+        torch.manual_seed(self.attention_seed)
+
+    def _init_feed_forward_seed(
+        self,
+    ):  # bskim's modification for deterministic calculation
+        self.feed_forward_seed = self.config.reformer_seed
+        torch.manual_seed(self.feed_forward_seed)
+        self.config.reformer_seed += 1
+
+    def __init_attention_seed(self):
         """
         This function sets a new seed for the attention layer to make dropout deterministic for both forward calls: 1
         normal forward call and 1 forward call in backward to recalculate activations.
@@ -1697,7 +1711,7 @@ class ReformerLayer(nn.Module):
 
         torch.manual_seed(self.attention_seed)
 
-    def _init_feed_forward_seed(self):
+    def __init_feed_forward_seed(self):
         """
         This function sets a new seed for the feed forward layer to make dropout deterministic for both forward calls:
         1 normal forward call and 1 forward call in backward to recalculate activations.

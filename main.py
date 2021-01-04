@@ -35,7 +35,7 @@ if __name__ == "__main__":
     if ARGS.model == "am":
         pretrain_model = PretrainModel()
         finetune_model = ScoreModel()
-    elif ARGS.model == "electra":
+    elif ARGS.model == "electra" or ARGS.model == "electra-reformer":
         pretrain_model = ElectraAIEdPretrainModel()
         finetune_model = ElectraAIEdFinetuneModel()
 

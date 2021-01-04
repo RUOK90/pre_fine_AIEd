@@ -86,7 +86,8 @@ def get_arg_parser():
     train_args.add_argument("--random_seed", type=int, default=1234)
     train_args.add_argument("--num_cross_folds", type=int, default=5)
     train_args.add_argument("--min_seq_size", type=int, default=11)  # +1 for cls
-    train_args.add_argument("--max_seq_size", type=int, default=101)  # +1 for cls
+    train_args.add_argument("--max_seq_size", type=int, default=4096)  # +1 for cls
+    # train_args.add_argument("--max_seq_size", type=int, default=101)  # +1 for cls
     train_args.add_argument("--pretrain_train_batch_size", type=int, default=1024)
     train_args.add_argument("--pretrain_test_batch_size", type=int, default=2048)
     train_args.add_argument("--finetune_train_batch_size", type=int, default=256)
@@ -99,6 +100,7 @@ def get_arg_parser():
     train_args.add_argument("--num_pretrain_epochs", type=int, default=100)
     train_args.add_argument("--num_finetune_epochs", type=int, default=100)
     train_args.add_argument("--random_mask_ratio", type=float, default=0.6)
+    train_args.add_argument("--dis_lambda", type=int, default=1)
     train_args.add_argument("--cut_point", type=float, default=0.2)
     train_args.add_argument("--aug_ratio", type=float, default=0.5)
     train_args.add_argument("--aug_sample_ratio", type=float, default=0.5)
@@ -106,7 +108,7 @@ def get_arg_parser():
         "--aug_mode",
         type=str,
         choices=["no_aug", "aug_only", "both"],
-        default="aug_only",
+        default="no_aug",
     )
     train_args.add_argument(
         "--gen_cate_target_sampling",
@@ -145,7 +147,7 @@ def get_arg_parser():
             "finetune_only_from_pretrained_weight",
             "both",
         ],
-        default="both",
+        default="finetune_only",
     )
     train_args.add_argument("--pretrained_weight_epoch", type=int, default=2)
     train_args.add_argument(
@@ -203,7 +205,8 @@ def get_arg_parser():
         "--model",
         type=str,
         choices=["am", "bert", "electra", "electra-reformer"],
-        default="electra",
+        default="electra-reformer",
+        # default="electra",
     )
     model = parser.parse_args().model
     if model == "am":
@@ -212,7 +215,6 @@ def get_arg_parser():
         model_args.add_argument("--num_heads", type=int, default=8)
         model_args.add_argument("--dropout", type=float, default=0.2)
     elif model == "electra":
-        model_args.add_argument("--dis_lambda", type=int, default=1)
         model_args.add_argument("--embedding_size", type=int, default=256)
         model_args.add_argument("--hidden_size", type=int, default=256)
         model_args.add_argument(
@@ -238,7 +240,7 @@ def get_arg_parser():
             "--hidden_act", type=str, choices=["relu", "gelu"], default="relu"
         )
         model_args.add_argument("--hidden_dropout_prob", type=float, default=0.05)
-        model_args.add_argument("--feed_forward_size", type=int, default=512)
+        model_args.add_argument("--feed_forward_size", type=int, default=1024)
         model_args.add_argument("--attention_head_size", type=int, default=64)
         model_args.add_argument(
             "--attn_layers",

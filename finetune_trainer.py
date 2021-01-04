@@ -24,6 +24,7 @@ class FineTuneTrainer:
         self._finetuned_weight_path = None
         self._val_best_renewal = False
         self._pretrain_best_val_perfs = []
+        self._patience = 10
 
     def _score_forward(self, dataloader, cross_num, mode, pretrain_epoch):
         batch_results = {"loss": [], "l1": [], "lc_l1": [], "rc_l1": []}
@@ -67,6 +68,9 @@ class FineTuneTrainer:
             if mae < self._best_val_perf[cross_num]:
                 self._best_val_perf[cross_num] = mae
                 self._val_best_renewal = True
+                self._patience = 10
+            else:
+                self._patience -= 1
 
             # if ARGS.use_wandb:
             #     wandb.log(
@@ -125,12 +129,14 @@ class FineTuneTrainer:
                         dataloaders["val"], cross_num, "val", pretrain_epoch
                     )
 
+                if self._patience == 0:
+                    break
+
                 # save model
                 if do_test and self._val_best_renewal:
                     self._finetuned_weight_path = f"{ARGS.weight_path}/{ARGS.downstream_task}_{pretrain_epoch}_{cross_num}.pt"
                     torch.save(self._model.state_dict(), self._finetuned_weight_path)
                     self._val_best_renewal = False
-                    print("save!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 
             # test
             if do_test:

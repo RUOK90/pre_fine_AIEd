@@ -1,3 +1,4 @@
+import copy
 from torch.distributions.categorical import Categorical
 from torch.distributions.normal import Normal
 import torch.nn.functional as F
@@ -23,17 +24,10 @@ class ElectraAIEdPretrainModel(nn.Module):
             dis_config.pad_token_id = Const.PAD_VAL
             dis_config.max_position_embeddings = ARGS.max_seq_size
 
-            gen_config = ElectraConfig()
-            gen_config.embedding_size = ARGS.embedding_size
-            gen_config.hidden_size = int(ARGS.hidden_size / 4)
-            gen_config.intermediate_size = int(ARGS.intermediate_size / 4)
-            gen_config.num_hidden_layers = ARGS.num_hidden_layers
-            gen_config.num_attention_heads = int(ARGS.num_attention_heads / 4)
-            gen_config.hidden_act = ARGS.hidden_act
-            gen_config.hidden_dropout_prob = ARGS.hidden_dropout_prob
-            gen_config.attention_probs_dropout_prob = ARGS.attention_probs_dropout_prob
-            gen_config.pad_token_id = Const.PAD_VAL
-            gen_config.max_position_embeddings = ARGS.max_seq_size
+            gen_config = copy.deepcopy(dis_config)
+            gen_config.hidden_size = int(dis_config.hidden_size / 4)
+            gen_config.intermediate_size = int(dis_config.intermediate_size / 4)
+            gen_config.num_attention_heads = int(dis_config.num_attention_heads / 4)
 
         elif ARGS.model == "electra-reformer":
             dis_config = ReformerConfig()
@@ -66,18 +60,11 @@ class ElectraAIEdPretrainModel(nn.Module):
             dis_config.use_cache = ARGS.use_cache
             dis_config.pad_token_id = Const.PAD_VAL
             dis_config.max_position_embeddings = ARGS.max_seq_size
+            dis_config.reformer_seed = ARGS.random_seed
 
-            # gen_config = ElectraConfig()
-            # gen_config.embedding_size = ARGS.embedding_size
-            # gen_config.hidden_size = int(ARGS.hidden_size / 4)
-            # gen_config.intermediate_size = int(ARGS.intermediate_size / 4)
-            # gen_config.num_hidden_layers = ARGS.num_hidden_layers
-            # gen_config.num_attention_heads = int(ARGS.num_attention_heads / 4)
-            # gen_config.hidden_act = ARGS.hidden_act
-            # gen_config.hidden_dropout_prob = ARGS.hidden_dropout_prob
-            # gen_config.attention_probs_dropout_prob = ARGS.attention_probs_dropout_prob
-            # gen_config.pad_token_id = Const.PAD_VAL
-            # gen_config.max_position_embeddings = ARGS.max_seq_size
+            gen_config = copy.deepcopy(dis_config)
+            gen_config.feed_forward_size = int(dis_config.feed_forward_size / 4)
+            gen_config.num_attention_heads = int(dis_config.num_attention_heads / 4)
 
         self.embeds = ElectraAIEdEmbeddings(dis_config)
         self.gen_model = ElectraAIEdMaskedLM(gen_config)
@@ -96,207 +83,68 @@ class ElectraAIEdPretrainModel(nn.Module):
         return gen_outputs, dis_outputs, dis_labels
 
 
-class ElectraAIEdPreTraining(ElectraPreTrainedModel):
-    def __init__(self, config):
-        super(ElectraAIEdPreTraining, self).__init__(config)
-        self.electra = ElectraAIEdModel(config)
-        self.discriminator_predictions = ElectraDiscriminatorPredictions(config)
-        self.init_weights()
+class ElectraAIEdFinetuneModel(nn.Module):
+    def __init__(self):
+        super(ElectraAIEdFinetuneModel, self).__init__()
+        # set config
+        if ARGS.model == "electra":
+            config = ElectraConfig()
+            config.embedding_size = ARGS.embedding_size
+            config.hidden_size = ARGS.hidden_size
+            config.intermediate_size = ARGS.intermediate_size
+            config.num_hidden_layers = ARGS.num_hidden_layers
+            config.num_attention_heads = ARGS.num_attention_heads
+            config.hidden_act = ARGS.hidden_act
+            config.hidden_dropout_prob = ARGS.hidden_dropout_prob
+            config.attention_probs_dropout_prob = ARGS.attention_probs_dropout_prob
+            config.pad_token_id = Const.PAD_VAL
+            config.max_position_embeddings = ARGS.max_seq_size
 
-    def forward(
-        self,
-        inputs=None,
-        attention_masks=None,
-        token_type_ids=None,
-        position_ids=None,
-        head_mask=None,
-        inputs_embeds=None,
-        labels=None,
-        output_attentions=None,
-        output_hidden_states=None,
-        return_dict=None,
-    ):
-        return_dict = (
-            return_dict if return_dict is not None else self.config.use_return_dict
-        )
+        elif ARGS.model == "electra-reformer":
+            config = ReformerConfig()
+            config.embedding_size = ARGS.hidden_size
+            config.axial_pos_embds = ARGS.axial_pos_embds
+            config.axial_pos_shape = tuple(ARGS.axial_pos_shape)
+            config.axial_pos_embds_dim = tuple(ARGS.axial_pos_embds_dim)
+            config.hidden_size = ARGS.hidden_size
+            config.hidden_act = ARGS.hidden_act
+            config.hidden_dropout_prob = ARGS.hidden_dropout_prob
+            config.feed_forward_size = ARGS.feed_forward_size
+            config.attention_head_size = ARGS.attention_head_size
+            config.attn_layers = ARGS.attn_layers
+            config.num_attention_heads = ARGS.num_attention_heads
+            config.local_attn_chunk_length = ARGS.local_attn_chunk_length
+            config.local_attention_probs_dropout_prob = (
+                ARGS.local_attention_probs_dropout_prob
+            )
+            config.local_num_chunks_before = ARGS.local_num_chunks_before
+            config.local_num_chunks_after = ARGS.local_num_chunks_after
+            config.lsh_attn_chunk_length = ARGS.lsh_attn_chunk_length
+            config.lsh_attention_probs_dropout_prob = (
+                ARGS.lsh_attention_probs_dropout_prob
+            )
+            config.lsh_num_chunks_before = ARGS.lsh_num_chunks_before
+            config.lsh_num_chunks_after = ARGS.lsh_num_chunks_after
+            config.num_hashes = ARGS.num_hashes
+            config.num_buckets = ARGS.num_buckets
+            config.is_decoder = ARGS.is_decoder
+            config.use_cache = ARGS.use_cache
+            config.pad_token_id = Const.PAD_VAL
+            config.max_position_embeddings = ARGS.max_seq_size
+            config.reformer_seed = ARGS.random_seed
 
-        discriminator_hidden_states = self.electra(
-            inputs,
-            attention_masks,
-            token_type_ids,
-            position_ids,
-            head_mask,
-            inputs_embeds,
-            output_attentions,
-            output_hidden_states,
-            return_dict,
-        )
-        discriminator_sequence_output = discriminator_hidden_states[0]
+        self.embeds = ElectraAIEdEmbeddings(config)
+        self.dis_model = ElectraAIEdSequenceClassification(config)
 
-        logits = self.discriminator_predictions(discriminator_sequence_output)
-        outputs = torch.sigmoid(logits)
-
-        return (logits, outputs)
-
-
-class ElectraAIEdMaskedLM(ElectraPreTrainedModel):
-    def __init__(self, config):
-        super(ElectraAIEdMaskedLM, self).__init__(config)
-        self.electra = ElectraAIEdModel(config)
-        self.generator_predictions = ElectraGeneratorPredictions(config)
-
-        heads_dict = {}
-        for target in ARGS.targets:
-            if target in Const.CATE_VARS:
-                heads_dict[f"{target}_logit_head"] = nn.Linear(
-                    config.embedding_size,
-                    Const.FEATURE_SIZE[target] + 1,  # +1 for cls
-                )
-                heads_dict[f"{target}_output_head"] = nn.Softmax(dim=-1)
-            elif target in Const.CONT_VARS:
-                if ARGS.gen_cont_target_sampling == "normal":
-                    heads_dict[f"{target}_logit_head"] = nn.Linear(
-                        config.embedding_size, 2
-                    )
-                    heads_dict[f"{target}_output_head"] = nn.Identity()
-                elif ARGS.gen_cont_target_sampling == "none":
-                    heads_dict[f"{target}_logit_head"] = nn.Linear(
-                        config.embedding_size, 1
-                    )
-                    if ARGS.time_output_func == "identity":
-                        heads_dict[f"{target}_output_head"] = nn.Identity()
-                    elif ARGS.time_output_func == "sigmoid":
-                        heads_dict[f"{target}_output_head"] = nn.Sigmoid()
-
-        self.heads = torch.nn.ModuleDict(heads_dict)
-
-        self.init_weights()
-
-    def forward(
-        self,
-        inputs=None,
-        attention_masks=None,
-        token_type_ids=None,
-        position_ids=None,
-        head_mask=None,
-        inputs_embeds=None,
-        labels=None,
-        output_attentions=None,
-        output_hidden_states=None,
-        return_dict=None,
-    ):
-        return_dict = (
-            return_dict if return_dict is not None else self.config.use_return_dict
-        )
-
-        generator_hidden_states = self.electra(
-            inputs,
-            attention_masks,
-            token_type_ids,
-            position_ids,
-            head_mask,
-            inputs_embeds,
-            output_attentions,
-            output_hidden_states,
-            return_dict,
-        )
-        generator_sequence_output = generator_hidden_states[0]
-
-        prediction_scores = self.generator_predictions(generator_sequence_output)
-
-        outputs = {}
-        for target in ARGS.targets:
-            if target in Const.CATE_VARS:
-                logit = self.heads[f"{target}_logit_head"](prediction_scores)
-                if ARGS.gen_cate_target_sampling == "categorical":
-                    output = (
-                        Categorical(self.heads[f"{target}_output_head"](logit)).sample()
-                        + 1
-                    )  # +1 since the var starts from 1, not 0
-                elif ARGS.gen_cate_target_sampling == "none":
-                    output = (
-                        logit.max(dim=-1)[1] + 1
-                    )  # +1 since the var starts from 1, not 0
-            elif target in Const.CONT_VARS:
-                logit = self.heads[f"{target}_logit_head"](prediction_scores).squeeze(
-                    -1
-                )
-                if ARGS.gen_cont_target_sampling == "normal":
-                    mu = logit[:, :, 0]
-                    std = F.softplus(logit[:, :, 1])
-                    logit = (mu, std)
-                    output = torch.clamp(Normal(mu, std).sample(), min=0, max=1)
-                elif ARGS.gen_cont_target_sampling == "none":
-                    output = self.heads[f"{target}_output_head"](logit).squeeze(-1)
-            outputs[target] = (logit, output)
+    def forward(self, unmasked_features, padding_masks):
+        attention_masks = (~padding_masks).long()
+        embeds = self.embeds(unmasked_features)
+        outputs = self.dis_model(embeds, attention_masks)
 
         return outputs
 
 
-class ElectraAIEdModel(ElectraPreTrainedModel):
-    def __init__(self, config):
-        super(ElectraAIEdModel, self).__init__(config)
-        if config.embedding_size != config.hidden_size:
-            self.embeddings_project = nn.Linear(
-                config.embedding_size, config.hidden_size
-            )
-        if ARGS.model == "electra":
-            self.encoder = ElectraEncoder(config)
-        elif ARGS.model == "electra-reformer":
-            self.encoder = ReformerEncoder(config)
-        self.config = config
-        self.init_weights()
-
-    def forward(
-        self,
-        inputs=None,
-        attention_masks=None,
-        token_type_ids=None,
-        position_ids=None,
-        head_mask=None,
-        inputs_embeds=None,
-        output_attentions=None,
-        output_hidden_states=None,
-        return_dict=None,
-    ):
-        output_attentions = (
-            output_attentions
-            if output_attentions is not None
-            else self.config.output_attentions
-        )
-        output_hidden_states = (
-            output_hidden_states
-            if output_hidden_states is not None
-            else self.config.output_hidden_states
-        )
-        return_dict = (
-            return_dict if return_dict is not None else self.config.use_return_dict
-        )
-        input_shape = inputs.shape[:-1]
-        device = inputs.device
-
-        extended_attention_mask = self.get_extended_attention_mask(
-            attention_masks, input_shape, device
-        )
-        head_mask = self.get_head_mask(head_mask, self.config.num_hidden_layers)
-
-        hidden_states = inputs
-        if hasattr(self, "embeddings_project"):
-            hidden_states = self.embeddings_project(hidden_states)
-
-        hidden_states = self.encoder(
-            hidden_states,
-            attention_mask=extended_attention_mask,
-            head_mask=head_mask,
-            output_attentions=output_attentions,
-            output_hidden_states=output_hidden_states,
-            return_dict=return_dict,
-        )
-
-        return hidden_states
-
-
-class ElectraAIEdEmbeddings(ElectraPreTrainedModel):
+class ElectraAIEdEmbeddings(ReformerPreTrainedModel):
     def __init__(self, config):
         super(ElectraAIEdEmbeddings, self).__init__(config)
         feature_embeds_dict = {}
@@ -309,8 +157,10 @@ class ElectraAIEdEmbeddings(ElectraPreTrainedModel):
                 )
             elif feature in Const.CONT_VARS:
                 feature_embeds_dict[feature] = nn.Linear(1, config.embedding_size)
-        self.position_embeds = nn.Embedding(
-            config.max_position_embeddings, config.embedding_size
+        self.position_embeds = (
+            AxialPositionEmbeddings(config)
+            if ARGS.model == "electra-reformer" and ARGS.axial_pos_embds
+            else nn.Embedding(config.max_position_embeddings, config.embedding_size)
         )
         self.feature_embeds = torch.nn.ModuleDict(feature_embeds_dict)
 
@@ -345,78 +195,223 @@ class ElectraAIEdEmbeddings(ElectraPreTrainedModel):
         return embeds
 
 
-class ElectraAIEdFinetuneModel(nn.Module):
-    def __init__(self):
-        super(ElectraAIEdFinetuneModel, self).__init__()
-        # set config
-        config = ElectraConfig()
-        config.embedding_size = ARGS.embedding_size
-        config.hidden_size = ARGS.hidden_size
-        config.intermediate_size = ARGS.intermediate_size
-        config.num_hidden_layers = ARGS.num_hidden_layers
-        config.num_attention_heads = ARGS.num_attention_heads
-        config.hidden_act = ARGS.hidden_act
-        config.hidden_dropout_prob = ARGS.hidden_dropout_prob
-        config.attention_probs_dropout_prob = ARGS.attention_probs_dropout_prob
-        config.pad_token_id = Const.PAD_VAL
-        config.max_position_embeddings = ARGS.max_seq_size
+class ElectraAIEdMaskedLM(ElectraPreTrainedModel):
+    def __init__(self, config):
+        super(ElectraAIEdMaskedLM, self).__init__(config)
+        if ARGS.model == "electra":
+            self.electra = ElectraAIEdModel(config)
+        elif ARGS.model == "electra-reformer":
+            self.electra = ReformerAIEdModel(config)
+        self.generator_predictions = ElectraAIEdGeneratorPredictions(config)
 
-        self.embeds = ElectraAIEdEmbeddings(config)
-        self.dis_model = ElectraAIEdSequenceClassification(config)
+        heads_dict = {}
+        for target in ARGS.targets:
+            if target in Const.CATE_VARS:
+                heads_dict[f"{target}_logit_head"] = nn.Linear(
+                    config.embedding_size,
+                    Const.FEATURE_SIZE[target] + 1,  # +1 for cls
+                )
+                heads_dict[f"{target}_output_head"] = nn.Softmax(dim=-1)
+            elif target in Const.CONT_VARS:
+                if ARGS.gen_cont_target_sampling == "normal":
+                    heads_dict[f"{target}_logit_head"] = nn.Linear(
+                        config.embedding_size, 2
+                    )
+                    heads_dict[f"{target}_output_head"] = nn.Identity()
+                elif ARGS.gen_cont_target_sampling == "none":
+                    heads_dict[f"{target}_logit_head"] = nn.Linear(
+                        config.embedding_size, 1
+                    )
+                    if ARGS.time_output_func == "identity":
+                        heads_dict[f"{target}_output_head"] = nn.Identity()
+                    elif ARGS.time_output_func == "sigmoid":
+                        heads_dict[f"{target}_output_head"] = nn.Sigmoid()
 
-    def forward(self, unmasked_features, padding_masks):
-        attention_masks = (~padding_masks).long()
-        embeds = self.embeds(unmasked_features)
-        outputs = self.dis_model(embeds, attention_masks)
+        self.heads = torch.nn.ModuleDict(heads_dict)
+
+        self.init_weights()
+
+    def forward(self, inputs, attention_masks):
+        generator_sequence_output = self.electra(inputs, attention_masks)[0]
+        prediction_scores = self.generator_predictions(generator_sequence_output)
+
+        outputs = {}
+        for target in ARGS.targets:
+            if target in Const.CATE_VARS:
+                logit = self.heads[f"{target}_logit_head"](prediction_scores)
+                if ARGS.gen_cate_target_sampling == "categorical":
+                    output = (
+                        Categorical(self.heads[f"{target}_output_head"](logit)).sample()
+                        + 1
+                    )  # +1 since the var starts from 1, not 0
+                elif ARGS.gen_cate_target_sampling == "none":
+                    output = (
+                        logit.max(dim=-1)[1] + 1
+                    )  # +1 since the var starts from 1, not 0
+            elif target in Const.CONT_VARS:
+                logit = self.heads[f"{target}_logit_head"](prediction_scores).squeeze(
+                    -1
+                )
+                if ARGS.gen_cont_target_sampling == "normal":
+                    mu = logit[:, :, 0]
+                    std = F.softplus(logit[:, :, 1])
+                    logit = (mu, std)
+                    output = torch.clamp(Normal(mu, std).sample(), min=0, max=1)
+                elif ARGS.gen_cont_target_sampling == "none":
+                    output = self.heads[f"{target}_output_head"](logit).squeeze(-1)
+            outputs[target] = (logit, output)
 
         return outputs
+
+
+class ElectraAIEdPreTraining(ElectraPreTrainedModel):
+    def __init__(self, config):
+        super(ElectraAIEdPreTraining, self).__init__(config)
+        if ARGS.model == "electra":
+            self.electra = ElectraAIEdModel(config)
+        elif ARGS.model == "electra-reformer":
+            self.electra = ReformerAIEdModel(config)
+        self.discriminator_predictions = ElectraAIEdDiscriminatorPredictions(config)
+        self.init_weights()
+
+    def forward(self, inputs, attention_masks):
+        discriminator_sequence_output = self.electra(inputs, attention_masks)[0]
+        logits = self.discriminator_predictions(discriminator_sequence_output)
+        outputs = torch.sigmoid(logits)
+
+        return (logits, outputs)
 
 
 class ElectraAIEdSequenceClassification(ElectraPreTrainedModel):
     def __init__(self, config):
         super(ElectraAIEdSequenceClassification, self).__init__(config)
-        self.electra = ElectraAIEdModel(config)
+        if ARGS.model == "electra":
+            self.electra = ElectraAIEdModel(config)
+        elif ARGS.model == "electra-reformer":
+            self.electra = ReformerAIEdModel(config)
         self.classifier = ElectraAIEdClassificationHead(config)
         self.init_weights()
 
-    def forward(
-        self,
-        inputs=None,
-        attention_masks=None,
-        token_type_ids=None,
-        position_ids=None,
-        head_mask=None,
-        inputs_embeds=None,
-        labels=None,
-        output_attentions=None,
-        output_hidden_states=None,
-        return_dict=None,
-    ):
-        return_dict = (
-            return_dict if return_dict is not None else self.config.use_return_dict
-        )
-
-        discriminator_hidden_states = self.electra(
-            inputs,
-            attention_masks,
-            token_type_ids,
-            position_ids,
-            head_mask,
-            inputs_embeds,
-            output_attentions,
-            output_hidden_states,
-            return_dict,
-        )
-        sequence_output = discriminator_hidden_states[0]
+    def forward(self, inputs, attention_masks):
+        sequence_output = self.electra(inputs, attention_masks)[0]
         outputs = self.classifier(sequence_output, attention_masks)
 
         return outputs
 
 
+class ElectraAIEdModel(ElectraPreTrainedModel):
+    def __init__(self, config):
+        super(ElectraAIEdModel, self).__init__(config)
+        if config.embedding_size != config.hidden_size:
+            self.embeddings_project = nn.Linear(
+                config.embedding_size, config.hidden_size
+            )
+        self.encoder = ElectraEncoder(config)
+        self.config = config
+        self.init_weights()
+
+    def forward(self, inputs, attention_masks, head_mask=None):
+        input_shape = inputs.shape[:-1]
+        device = inputs.device
+
+        extended_attention_mask = self.get_extended_attention_mask(
+            attention_masks, input_shape, device
+        )
+        head_mask = self.get_head_mask(head_mask, self.config.num_hidden_layers)
+
+        hidden_states = inputs
+        if hasattr(self, "embeddings_project"):
+            hidden_states = self.embeddings_project(hidden_states)
+
+        hidden_states = self.encoder(
+            hidden_states=hidden_states,
+            attention_mask=extended_attention_mask,
+            head_mask=head_mask,
+        )
+
+        return hidden_states
+
+
+class ReformerAIEdModel(ReformerPreTrainedModel):
+    def __init__(self, config):
+        super(ReformerAIEdModel, self).__init__(config)
+        if config.embedding_size != config.hidden_size:
+            self.embeddings_project = nn.Linear(
+                config.embedding_size, config.hidden_size
+            )
+        self.encoder = ReformerEncoder(config)
+        self.config = config
+        self.init_weights()
+
+    def forward(self, inputs, attention_masks, head_mask=None):
+        use_cache = self.config.use_cache
+        input_shape = inputs.size()  # noqa: F841
+        device = inputs.device
+
+        head_mask = self.get_head_mask(
+            head_mask, self.config.num_hidden_layers, is_attention_chunked=True
+        )
+        orig_sequence_length = input_shape[-2]
+
+        hidden_states = inputs
+        if hasattr(self, "embeddings_project"):
+            hidden_states = self.embeddings_project(hidden_states)
+
+        hidden_states = self.encoder(
+            hidden_states=hidden_states,
+            attention_mask=attention_masks,
+            head_mask=head_mask,
+            use_cache=use_cache,
+            orig_sequence_length=orig_sequence_length,
+        )
+
+        return hidden_states
+
+
+class ElectraAIEdGeneratorPredictions(nn.Module):
+    def __init__(self, config):
+        super(ElectraAIEdGeneratorPredictions, self).__init__()
+        self.config = config
+        if ARGS.model == "electra":
+            self.dense = nn.Linear(config.hidden_size, config.embedding_size)
+        elif ARGS.model == "electra-reformer":
+            self.dense = nn.Linear(2 * config.hidden_size, config.embedding_size)
+        self.LayerNorm = nn.LayerNorm(config.embedding_size)
+
+    def forward(self, generator_hidden_states):
+        hidden_states = self.dense(generator_hidden_states)
+        hidden_states = get_activation(self.config.hidden_act)(hidden_states)
+        hidden_states = self.LayerNorm(hidden_states)
+
+        return hidden_states
+
+
+class ElectraAIEdDiscriminatorPredictions(nn.Module):
+    def __init__(self, config):
+        super(ElectraAIEdDiscriminatorPredictions, self).__init__()
+        self.config = config
+        if ARGS.model == "electra":
+            self.dense = nn.Linear(config.hidden_size, config.hidden_size)
+        elif ARGS.model == "electra-reformer":
+            self.dense = nn.Linear(2 * config.hidden_size, config.hidden_size)
+        self.dense_prediction = nn.Linear(config.hidden_size, 1)
+
+    def forward(self, discriminator_hidden_states):
+        hidden_states = self.dense(discriminator_hidden_states)
+        hidden_states = get_activation(self.config.hidden_act)(hidden_states)
+        logits = self.dense_prediction(hidden_states).squeeze(-1)
+
+        return logits
+
+
 class ElectraAIEdClassificationHead(nn.Module):
     def __init__(self, config):
         super(ElectraAIEdClassificationHead, self).__init__()
-        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
+        self.config = config
+        if ARGS.model == "electra":
+            self.dense = nn.Linear(config.hidden_size, config.hidden_size)
+        elif ARGS.model == "electra-reformer":
+            self.dense = nn.Linear(2 * config.hidden_size, config.hidden_size)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
         if ARGS.downstream_task == "score":
             proj_dict = {}
@@ -434,7 +429,7 @@ class ElectraAIEdClassificationHead(nn.Module):
 
         x = self.dropout(x)
         x = self.dense(x)
-        x = get_activation("gelu")(x)
+        x = get_activation(self.config.hidden_act)(x)
         x = self.dropout(x)
 
         outputs = {}

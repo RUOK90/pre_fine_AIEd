@@ -75,6 +75,16 @@ class ScoreDataSet(data.Dataset):
             q_info_dic, user_inter_path, user_id_list
         )
 
+        # self.seq_lens = {}
+        # for user_id, inters in self._user_inters.items():
+        #     seq_len = len(inters["qid"])
+        #     if seq_len not in self.seq_lens:
+        #         self.seq_lens[seq_len] = 1
+        #     else:
+        #         self.seq_lens[seq_len] += 1
+        # self.seq_lens = list(self.seq_lens.items())
+        # self.seq_lens.sort()
+
     def __len__(self):
         return len(self._user_id_list)
 
