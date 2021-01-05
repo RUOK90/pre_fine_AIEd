@@ -1,9 +1,16 @@
 import copy
 import torch
 import torch.optim as optim
+from itertools import chain
 
 from optim_schedule import *
 from config import *
+
+
+def get_chained_dataloader(dataloader, num_chaines):
+    chained_dataloader = chain.from_iterable([dataloader] * num_chaines)
+
+    return chained_dataloader
 
 
 def load_pretrained_weight(model, weight_path):

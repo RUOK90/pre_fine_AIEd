@@ -49,7 +49,7 @@ def get_arg_parser():
     #################### Base args ####################
     base_args = parser.add_argument_group("Base args")
     base_args.add_argument("--run_script")
-    base_args.add_argument("--debug_mode", type=str2bool, default=True)
+    base_args.add_argument("--debug_mode", type=str2bool, default=False)
     base_args.add_argument("--gpu", type=str, default="7")
     base_args.add_argument("--device", type=str)
     base_args.add_argument("--num_workers", type=int, default=4)
@@ -86,22 +86,24 @@ def get_arg_parser():
     train_args.add_argument("--random_seed", type=int, default=1234)
     train_args.add_argument("--num_cross_folds", type=int, default=5)
     train_args.add_argument("--min_seq_size", type=int, default=11)  # +1 for cls
-    train_args.add_argument("--max_seq_size", type=int, default=4096)  # +1 for cls
-    # train_args.add_argument("--max_seq_size", type=int, default=101)  # +1 for cls
+    # train_args.add_argument("--max_seq_size", type=int, default=8192)  # +1 for cls
+    train_args.add_argument("--max_seq_size", type=int, default=101)  # +1 for cls
     train_args.add_argument("--pretrain_train_batch_size", type=int, default=1024)
     train_args.add_argument("--pretrain_test_batch_size", type=int, default=2048)
+    train_args.add_argument("--pretrain_max_num_evals", type=int, default=100)
+    train_args.add_argument("--pretrain_update_steps", type=int, default=350)
     train_args.add_argument("--finetune_train_batch_size", type=int, default=256)
     train_args.add_argument("--finetune_test_batch_size", type=int, default=2048)
+    train_args.add_argument("--finetune_max_num_evals", type=int, default=1000)
+    train_args.add_argument("--finetune_update_steps", type=int, default=5)
+    train_args.add_argument("--finetune_patience", type=int, default=10)
     train_args.add_argument(
         "--optim", type=str, choices=["scheduled", "noam"], default="scheduled"
     )
     train_args.add_argument("--lr", type=float, default=0.001)
     train_args.add_argument("--warmup_steps", type=int, default=4000)
-    train_args.add_argument("--num_pretrain_epochs", type=int, default=100)
-    train_args.add_argument("--num_finetune_epochs", type=int, default=100)
     train_args.add_argument("--random_mask_ratio", type=float, default=0.6)
     train_args.add_argument("--dis_lambda", type=int, default=1)
-    train_args.add_argument("--cut_point", type=float, default=0.2)
     train_args.add_argument("--aug_ratio", type=float, default=0.5)
     train_args.add_argument("--aug_sample_ratio", type=float, default=0.5)
     train_args.add_argument(
@@ -149,7 +151,7 @@ def get_arg_parser():
         ],
         default="finetune_only",
     )
-    train_args.add_argument("--pretrained_weight_epoch", type=int, default=2)
+    train_args.add_argument("--pretrained_weight_n_eval", type=int, default=2)
     train_args.add_argument(
         "--input_features",
         type=str,
@@ -206,7 +208,6 @@ def get_arg_parser():
         type=str,
         choices=["am", "bert", "electra", "electra-reformer"],
         default="electra-reformer",
-        # default="electra",
     )
     model = parser.parse_args().model
     if model == "am":
@@ -247,7 +248,8 @@ def get_arg_parser():
             type=str,
             choices=["local", "lsh"],
             nargs="+",
-            default=["local", "lsh", "local", "lsh", "local", "lsh"],
+            # default=["local", "lsh", "local", "lsh", "local", "lsh"],
+            default=["local", "lsh", "local", "lsh"],
         )
         model_args.add_argument("--num_attention_heads", type=int, default=12)
         model_args.add_argument("--local_attn_chunk_length", type=int, default=64)
@@ -277,32 +279,40 @@ def get_args():
 
     # name
     # input_masked_target
-    args.wandb_name = ""
-    # input
-    if "is_correct" in args.input_features:
-        args.wandb_name += "ic-"
-    if "is_on_time" in args.input_features:
-        args.wandb_name += "iot-"
-    if "elapsed_time" in args.input_features:
-        args.wandb_name += "et-"
-    if "lag_time" in args.input_features:
-        args.wandb_name += "lt-"
-    args.wandb_name = args.wandb_name.rstrip("-") + "_"
-    # target
-    if "is_correct" in args.targets:
-        args.wandb_name += "ic-"
-    if "is_on_time" in args.targets:
-        args.wandb_name += "iot-"
-    if "elapsed_time" in args.targets:
-        args.wandb_name += "et-"
-    if "lag_time" in args.targets:
-        args.wandb_name += "lt-"
-    args.wandb_name = args.wandb_name.rstrip("-")
-    args.wandb_name += (
-        f"_{args.gen_cate_target_sampling}_{args.gen_cont_target_sampling}"
-    )
-    if args.gen_cont_target_sampling == "none" and "elapsed_time" in args.targets:
-        args.wandb_name += f"_{args.time_output_func}_{args.time_loss}"
+    # args.wandb_name = ""
+    # # input
+    # if "is_correct" in args.input_features:
+    #     args.wandb_name += "ic-"
+    # if "is_on_time" in args.input_features:
+    #     args.wandb_name += "iot-"
+    # if "elapsed_time" in args.input_features:
+    #     args.wandb_name += "et-"
+    # if "lag_time" in args.input_features:
+    #     args.wandb_name += "lt-"
+    # args.wandb_name = args.wandb_name.rstrip("-") + "_"
+    # # target
+    # if "is_correct" in args.targets:
+    #     args.wandb_name += "ic-"
+    # if "is_on_time" in args.targets:
+    #     args.wandb_name += "iot-"
+    # if "elapsed_time" in args.targets:
+    #     args.wandb_name += "et-"
+    # if "lag_time" in args.targets:
+    #     args.wandb_name += "lt-"
+    # args.wandb_name = args.wandb_name.rstrip("-")
+    # args.wandb_name += (
+    #     f"_{args.gen_cate_target_sampling}_{args.gen_cont_target_sampling}"
+    # )
+    # if args.gen_cont_target_sampling == "none" and "elapsed_time" in args.targets:
+    #     args.wandb_name += f"_{args.time_output_func}_{args.time_loss}"
+
+    args.wandb_name = f"{args.train_mode}_{args.model}_{args.max_seq_size}"
+    if "local" in args.attn_layers and "lsh" in args.attn_layers:
+        args.wandb_name += f"_local_lsh"
+    elif "local" in args.attn_layers:
+        args.wandb_name += f"_local"
+    elif "lsh" in args.attn_layers:
+        args.wandb_name += f"_lsh"
 
     # parse tags
     args.wandb_tags = (
@@ -321,10 +331,12 @@ def get_args():
         args.pretrain_base_path = "/private/datasets/LAK21_AM/load_debug"
         args.pretrain_train_batch_size = 4
         args.pretrain_test_batch_size = 4
+        args.pretrain_max_num_evals = 3
+        args.pretrain_update_steps = 3
         args.finetune_train_batch_size = 4
         args.finetune_test_batch_size = 4
-        args.num_pretrain_epochs = 5
-        args.num_finetune_epochs = 5
+        args.finetune_max_num_evals = 3
+        args.finetune_update_steps = 3
         args.wandb_name = "debug"
 
     # wandb
@@ -359,6 +371,28 @@ def get_args():
     # electra sanity check
     if args.model == "electra":
         assert set(args.masked_features) == set(args.targets)
+
+    # settings
+    if args.max_seq_size == 512:
+        args.axial_pos_shape = [16, 32]
+        args.finetune_train_batch_size = 64
+        args.finetune_test_batch_size = 256
+    elif args.max_seq_size == 1024:
+        args.axial_pos_shape = [32, 32]
+        args.finetune_train_batch_size = 64
+        args.finetune_test_batch_size = 128
+    elif args.max_seq_size == 2048:
+        args.axial_pos_shape = [32, 64]
+        args.finetune_train_batch_size = 32
+        args.finetune_test_batch_size = 64
+    elif args.max_seq_size == 4096:
+        args.axial_pos_shape = [64, 64]
+        args.finetune_train_batch_size = 8
+        args.finetune_test_batch_size = 32
+    elif args.max_seq_size == 8192:
+        args.axial_pos_shape = [64, 128]
+        args.finetune_train_batch_size = 4
+        args.finetune_test_batch_size = 16
 
     return args, parser
 

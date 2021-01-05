@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 from tqdm import tqdm
+from itertools import islice
 
 from trainer_util import *
 from config import *
@@ -18,15 +19,14 @@ class FineTuneTrainer:
 
         self._bce_loss = nn.BCEWithLogitsLoss(reduction="mean")
         self._l1_loss = nn.L1Loss(reduction="none")
-        self._cur_epoch = None
         self._best_val_perf = None
         self._test_perf = None
         self._finetuned_weight_path = None
         self._val_best_renewal = False
         self._pretrain_best_val_perfs = []
-        self._patience = 10
+        self._patience = ARGS.finetune_patience
 
-    def _score_forward(self, dataloader, cross_num, mode, pretrain_epoch):
+    def _score_forward(self, dataloader, cross_num, mode, pretrain_n_eval):
         batch_results = {"loss": [], "l1": [], "lc_l1": [], "rc_l1": []}
 
         for step, batch in enumerate(tqdm(dataloader)):
@@ -55,7 +55,7 @@ class FineTuneTrainer:
             if self._model.training:
                 self._optim.update(batch_total_loss)
 
-            if ARGS.debug_mode and step == 4:
+            if ARGS.debug_mode and step == ARGS.finetune_update_steps:
                 break
 
         # print, save model, and wandb output
@@ -68,7 +68,7 @@ class FineTuneTrainer:
             if mae < self._best_val_perf[cross_num]:
                 self._best_val_perf[cross_num] = mae
                 self._val_best_renewal = True
-                self._patience = 10
+                self._patience = ARGS.finetune_patience
             else:
                 self._patience -= 1
 
@@ -101,32 +101,37 @@ class FineTuneTrainer:
         #         commit=False,
         #     )
 
-    def _train(self, pretrained_weight_path, pretrain_epoch, do_test):
+    def _train(self, pretrained_weight_path, pretrain_n_eval, do_test):
         if ARGS.downstream_task == "score":
             self._best_val_perf = [np.inf for i in range(ARGS.num_cross_folds)]
             self._test_perf = [np.inf for i in range(ARGS.num_cross_folds)]
 
         for cross_num, dataloaders in self._dataloaders.items():
+            chained_train_dataloader = get_chained_dataloader(
+                dataloaders["train"], ARGS.finetune_max_num_evals
+            )
             set_random_seed(ARGS.random_seed)
             self._model = load_pretrained_weight(
                 self._dummy_model, pretrained_weight_path
             )
             self._optim = get_optimizer(self._model, ARGS.optim)
-            for epoch in range(ARGS.num_finetune_epochs):
-                print(f"\nCross Num: {cross_num:03d}, Finetuning Epoch: {epoch:03d}")
-                self._cur_epoch = epoch
+            for n_eval in range(ARGS.finetune_max_num_evals):
+                print(f"\nCross Num: {cross_num:03d}, Finetuning n_eval: {n_eval:03d}")
 
                 # train
                 self._model.train()
                 self._score_forward(
-                    dataloaders["train"], cross_num, "train", pretrain_epoch
+                    islice(chained_train_dataloader, ARGS.finetune_update_steps),
+                    cross_num,
+                    "train",
+                    pretrain_n_eval,
                 )
 
                 # val
                 with torch.no_grad():
                     self._model.eval()
                     self._score_forward(
-                        dataloaders["val"], cross_num, "val", pretrain_epoch
+                        dataloaders["val"], cross_num, "val", pretrain_n_eval
                     )
 
                 if self._patience == 0:
@@ -134,7 +139,7 @@ class FineTuneTrainer:
 
                 # save model
                 if do_test and self._val_best_renewal:
-                    self._finetuned_weight_path = f"{ARGS.weight_path}/{ARGS.downstream_task}_{pretrain_epoch}_{cross_num}.pt"
+                    self._finetuned_weight_path = f"{ARGS.weight_path}/{ARGS.downstream_task}_{pretrain_n_eval}_{cross_num}.pt"
                     torch.save(self._model.state_dict(), self._finetuned_weight_path)
                     self._val_best_renewal = False
 
@@ -144,7 +149,7 @@ class FineTuneTrainer:
                     self._model.load_state_dict(torch.load(self._finetuned_weight_path))
                     self._model.eval()
                     self._score_forward(
-                        dataloaders["test"], cross_num, "test", pretrain_epoch
+                        dataloaders["test"], cross_num, "test", pretrain_n_eval
                     )
 
         # mean over cross validation split print and wandb output
@@ -165,11 +170,11 @@ class FineTuneTrainer:
             ] = finetune_mean_best_val_perf
             if (
                 ARGS.train_mode == "finetune_only_from_pretrained_weight"
-                and ARGS.pretrained_weight_epoch != -1
+                and ARGS.pretrained_weight_n_eval != -1
             ):
                 wandb_step = 0
             else:
-                wandb_step = pretrain_epoch
+                wandb_step = pretrain_n_eval
             wandb.log(wandb_log_dict, step=wandb_step)
 
         # print test outputs

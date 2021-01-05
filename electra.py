@@ -35,6 +35,7 @@ class ElectraAIEdPretrainModel(nn.Module):
             dis_config.axial_pos_embds = ARGS.axial_pos_embds
             dis_config.axial_pos_shape = tuple(ARGS.axial_pos_shape)
             dis_config.axial_pos_embds_dim = tuple(ARGS.axial_pos_embds_dim)
+            dis_config.num_hidden_layers = len(ARGS.attn_layers)
             dis_config.hidden_size = ARGS.hidden_size
             dis_config.hidden_act = ARGS.hidden_act
             dis_config.hidden_dropout_prob = ARGS.hidden_dropout_prob
@@ -106,6 +107,7 @@ class ElectraAIEdFinetuneModel(nn.Module):
             config.axial_pos_embds = ARGS.axial_pos_embds
             config.axial_pos_shape = tuple(ARGS.axial_pos_shape)
             config.axial_pos_embds_dim = tuple(ARGS.axial_pos_embds_dim)
+            config.num_hidden_layers = len(ARGS.attn_layers)
             config.hidden_size = ARGS.hidden_size
             config.hidden_act = ARGS.hidden_act
             config.hidden_dropout_prob = ARGS.hidden_dropout_prob

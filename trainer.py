@@ -6,6 +6,7 @@ from torch.distributions.normal import Normal
 import numpy as np
 from sklearn.metrics import roc_auc_score
 from tqdm import tqdm
+from itertools import islice
 
 from trainer_util import *
 from config import *
@@ -23,7 +24,7 @@ class Trainer:
         self._bce_loss = nn.BCEWithLogitsLoss(reduction="mean")
         self._ce_loss = nn.CrossEntropyLoss(reduction="mean")
         self._l1_loss = nn.L1Loss(reduction="none")
-        self._cur_epoch = 0
+        self._cur_n_eval = 0
 
     def _pretrain(self, dataloader, mode):
         total_gen_target_cnt = 0
@@ -102,11 +103,9 @@ class Trainer:
                 batch_results["dis"]["label"].extend(label.detach().cpu().numpy())
 
             if self._pretrain_model.training:
-                if step / len(dataloader) > ARGS.cut_point:
-                    break
                 self._optim.update(gen_total_loss + ARGS.dis_lambda * dis_loss)
 
-            if ARGS.debug_mode and step == 4:
+            if ARGS.debug_mode and step == ARGS.pretrain_update_steps:
                 break
 
         # print and wandb output
@@ -128,7 +127,7 @@ class Trainer:
                     wandb_log_dict[f"{mode} {target} acc"] = acc
                 elif target in Const.CONT_VARS:
                     wandb_log_dict[f"{mode} {target} l1"] = l1
-                wandb.log(wandb_log_dict, step=self._cur_epoch)
+                wandb.log(wandb_log_dict, step=self._cur_n_eval)
 
         # for discriminator outputs
         if dis_outputs is not None:
@@ -149,35 +148,41 @@ class Trainer:
                 wandb_log_dict[f"{mode} dis label"] = np.mean(
                     batch_results["dis"]["label"]
                 )
-                wandb.log(wandb_log_dict, step=self._cur_epoch)
+                wandb.log(wandb_log_dict, step=self._cur_n_eval)
 
     def _train(self):
         if ARGS.train_mode == "finetune_only":
             self._finetune_trainer._train(None, 0, True)
         elif ARGS.train_mode == "finetune_only_from_pretrained_weight":
-            if ARGS.pretrained_weight_epoch == -1:
+            if ARGS.pretrained_weight_n_eval == -1:
                 # only finetune from the whole pretrained weights
-                for epoch in range(ARGS.num_pretrain_epochs):
-                    print(f"\nPretraining Epoch: {epoch:03d}")
-                    pretrained_weight_path = f"{ARGS.weight_path}/{epoch}.pt"
-                    self._finetune_trainer._train(pretrained_weight_path, epoch, False)
-                self._get_best_val_epoch()
+                for n_eval in range(ARGS.pretrain_max_num_evals):
+                    print(f"\nPretraining n_eval: {n_eval:03d}")
+                    pretrained_weight_path = f"{ARGS.weight_path}/{n_eval}.pt"
+                    self._finetune_trainer._train(pretrained_weight_path, n_eval, False)
+                self._get_best_val_n_eval()
             else:
-                epoch = ARGS.pretrained_weight_epoch
-                pretrained_weight_path = f"{ARGS.weight_path}/{epoch}.pt"
-                self._finetune_trainer._train(pretrained_weight_path, epoch, True)
+                n_eval = ARGS.pretrained_weight_n_eval
+                pretrained_weight_path = f"{ARGS.weight_path}/{n_eval}.pt"
+                self._finetune_trainer._train(pretrained_weight_path, n_eval, True)
         elif ARGS.train_mode == "both" or ARGS.train_mode == "pretrain_only":
-            for epoch in range(ARGS.num_pretrain_epochs):
-                print(f"\nPretraining Epoch: {epoch:03d}")
-                self._cur_epoch = epoch
+            chained_train_dataloader = get_chained_dataloader(
+                self._pretrain_dataloaders["train"], ARGS.pretrain_max_num_evals
+            )
+            for n_eval in range(ARGS.pretrain_max_num_evals):
+                print(f"\nPretraining n_eval: {n_eval:03d}")
+                self._cur_n_eval = n_eval
 
                 # set random seed
-                set_random_seed(ARGS.random_seed + epoch)
+                set_random_seed(ARGS.random_seed + n_eval)
 
                 # pretrain train
                 self._pretrain_model.train()
                 print(f"pretraining train")
-                self._pretrain(self._pretrain_dataloaders["train"], "train")
+                self._pretrain(
+                    islice(chained_train_dataloader, ARGS.pretrain_update_steps),
+                    "train",
+                )
 
                 # pretrain val
                 print("pretraining validation")
@@ -186,19 +191,19 @@ class Trainer:
                     self._pretrain(self._pretrain_dataloaders["val"], "val")
 
                 # save pretrained model
-                pretrained_weight_path = f"{ARGS.weight_path}/{epoch}.pt"
+                pretrained_weight_path = f"{ARGS.weight_path}/{n_eval}.pt"
                 torch.save(self._pretrain_model.state_dict(), pretrained_weight_path)
 
                 if ARGS.train_mode == "both":
                     # finetune
                     print(f"finetuning after the pretraining")
-                    self._finetune_trainer._train(pretrained_weight_path, epoch, False)
+                    self._finetune_trainer._train(pretrained_weight_path, n_eval, False)
 
             if ARGS.train_mode == "both":
                 # get finetune test performance
-                self._get_best_val_epoch()
+                self._get_best_val_n_eval()
 
-    def _get_best_val_epoch(self):
+    def _get_best_val_n_eval(self):
         if ARGS.downstream_task == "score":
-            best_epoch = np.argmin(self._finetune_trainer._pretrain_best_val_perfs)
-        print(f"best val pretrain epoch: {best_epoch}")
+            best_n_eval = np.argmin(self._finetune_trainer._pretrain_best_val_perfs)
+        print(f"best val pretrain n_eval: {best_n_eval}")

@@ -47,16 +47,6 @@ class EdNetDataSet(data.Dataset):
         self._user_windows = user_windows
         self._user_inters = get_user_data(user_inter_path)
 
-        # self.seq_lens = {}
-        # for user_id, inters in self._user_inters.items():
-        #     seq_len = len(inters[0])
-        #     if seq_len not in self.seq_lens:
-        #         self.seq_lens[seq_len] = 1
-        #     else:
-        #         self.seq_lens[seq_len] += 1
-        # self.seq_lens = list(self.seq_lens.items())
-        # self.seq_lens.sort()
-
     def __len__(self):
         return len(self._user_windows)
 
