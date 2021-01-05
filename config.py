@@ -322,7 +322,7 @@ def get_args():
         # args.finetune_test_batch_size = 32
         # args.finetune_update_steps = 10
         args.finetune_train_batch_size = 1
-        args.finetune_test_batch_size = 32
+        args.finetune_test_batch_size = 8
         args.finetune_update_steps = 256
     elif args.max_seq_size == 1024:
         args.axial_pos_shape = [32, 32]
@@ -330,7 +330,7 @@ def get_args():
         # args.finetune_test_batch_size = 16
         # args.finetune_update_steps = 10
         args.finetune_train_batch_size = 1
-        args.finetune_test_batch_size = 16
+        args.finetune_test_batch_size = 8
         args.finetune_update_steps = 256
     elif args.max_seq_size == 2048:
         args.axial_pos_shape = [32, 64]
@@ -347,7 +347,7 @@ def get_args():
         # args.finetune_update_steps = 10
         args.finetune_train_batch_size = 1
         args.finetune_test_batch_size = 4
-        args.finetune_update_steps = 256
+        args.finetune_update_steps = 64
     elif args.max_seq_size == 8192:
         args.axial_pos_shape = [64, 128]
         # args.finetune_train_batch_size = 1
@@ -355,7 +355,7 @@ def get_args():
         # args.finetune_update_steps = 10
         args.finetune_train_batch_size = 1
         args.finetune_test_batch_size = 2
-        args.finetune_update_steps = 256
+        args.finetune_update_steps = 64
 
     # wandb setting
     # input_masked_target
