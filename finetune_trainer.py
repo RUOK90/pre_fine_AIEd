@@ -53,7 +53,7 @@ class FineTuneTrainer:
             batch_total_loss = lc_loss + rc_loss
             batch_results["loss"].append(batch_total_loss.item())
 
-            if self._model.training:
+            if self._model.training and step == ARGS.finetune_update_steps - 1:
                 self._optim.update(batch_total_loss)
 
             if ARGS.debug_mode and step == ARGS.finetune_update_steps:
