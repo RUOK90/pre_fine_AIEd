@@ -25,8 +25,9 @@ class FineTuneTrainer:
         self._val_best_renewal = False
         self._pretrain_best_val_perfs = []
         self._patience = ARGS.finetune_patience
+        self._cur_n_eval = 0
 
-    def _score_forward(self, dataloader, cross_num, mode, pretrain_n_eval):
+    def _score_forward(self, dataloader, cross_num, mode):
         batch_results = {"loss": [], "l1": [], "lc_l1": [], "rc_l1": []}
 
         for step, batch in enumerate(tqdm(dataloader)):
@@ -72,16 +73,6 @@ class FineTuneTrainer:
             else:
                 self._patience -= 1
 
-            # if ARGS.use_wandb:
-            #     wandb.log(
-            #         {
-            #             f"{mode} {ARGS.downstream_task}_{cross_num} min_mae": self._best_val_perf[
-            #                 cross_num
-            #             ]
-            #         },
-            #         step=wandb_step,
-            #         commit=False,
-            #     )
         elif mode == "test":
             self._test_perf[cross_num] = mae
 
@@ -89,17 +80,13 @@ class FineTuneTrainer:
             f"{mode} {ARGS.downstream_task}_{cross_num} loss: {loss:.4f}, mae: {mae:.4f}, lc_mae: {lc_mae:.4f}, rc_mae: {rc_mae:.4f}"
         )
 
-        # if ARGS.use_wandb:
-        #     wandb.log(
-        #         {
-        #             f"{mode} {ARGS.downstream_task}_{cross_num} loss": loss,
-        #             f"{mode} {ARGS.downstream_task}_{cross_num} mae": mae,
-        #             f"{mode} {ARGS.downstream_task}_{cross_num} lc_mae": lc_mae,
-        #             f"{mode} {ARGS.downstream_task}_{cross_num} rc_mae": rc_mae,
-        #         },
-        #         step=wandb_step,
-        #         commit=False,
-        #     )
+        if ARGS.use_finetune_wandb and cross_num == 0:
+            wandb_log_dict = {}
+            wandb_log_dict[f"{mode} {ARGS.downstream_task}_{cross_num} loss"] = loss
+            wandb_log_dict[f"{mode} {ARGS.downstream_task}_{cross_num} mae"] = mae
+            wandb_log_dict[f"{mode} {ARGS.downstream_task}_{cross_num} lc_mae"] = lc_mae
+            wandb_log_dict[f"{mode} {ARGS.downstream_task}_{cross_num} rc_mae"] = rc_mae
+            wandb.log(wandb_log_dict, step=self._cur_n_eval)
 
     def _train(self, pretrained_weight_path, pretrain_n_eval, do_test):
         if ARGS.downstream_task == "score":
@@ -117,6 +104,7 @@ class FineTuneTrainer:
             self._optim = get_optimizer(self._model, ARGS.optim)
             for n_eval in range(ARGS.finetune_max_num_evals):
                 print(f"\nCross Num: {cross_num:03d}, Finetuning n_eval: {n_eval:03d}")
+                self._cur_n_eval = n_eval
 
                 # train
                 self._model.train()
@@ -124,15 +112,12 @@ class FineTuneTrainer:
                     islice(chained_train_dataloader, ARGS.finetune_update_steps),
                     cross_num,
                     "train",
-                    pretrain_n_eval,
                 )
 
                 # val
                 with torch.no_grad():
                     self._model.eval()
-                    self._score_forward(
-                        dataloaders["val"], cross_num, "val", pretrain_n_eval
-                    )
+                    self._score_forward(dataloaders["val"], cross_num, "val")
 
                 if self._patience == 0:
                     break
@@ -148,9 +133,7 @@ class FineTuneTrainer:
                 with torch.no_grad():
                     self._model.load_state_dict(torch.load(self._finetuned_weight_path))
                     self._model.eval()
-                    self._score_forward(
-                        dataloaders["test"], cross_num, "test", pretrain_n_eval
-                    )
+                    self._score_forward(dataloaders["test"], cross_num, "test")
 
         # mean over cross validation split print and wandb output
         # print val outputs

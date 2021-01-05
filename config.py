@@ -49,7 +49,7 @@ def get_arg_parser():
     #################### Base args ####################
     base_args = parser.add_argument_group("Base args")
     base_args.add_argument("--run_script")
-    base_args.add_argument("--debug_mode", type=str2bool, default=False)
+    base_args.add_argument("--debug_mode", type=str2bool, default=True)
     base_args.add_argument("--gpu", type=str, default="7")
     base_args.add_argument("--device", type=str)
     base_args.add_argument("--num_workers", type=int, default=4)
@@ -57,10 +57,13 @@ def get_arg_parser():
     #################### Logging args ####################
     logging_args = parser.add_argument_group("Logging args")
     logging_args.add_argument("--use_wandb", type=str2bool, default=False)
+    logging_args.add_argument("--use_finetune_wandb", type=str2bool, default=False)
     logging_args.add_argument("--wandb_project", type=str, default="pre_fine_aied")
+    logging_args.add_argument(
+        "--finetune_wandb_project", type=str, default="pre_fine_aied_finetune"
+    )
     logging_args.add_argument("--wandb_name", type=str)
     logging_args.add_argument("--wandb_tags")
-    logging_args.add_argument("--use_tensorboard", type=str2bool, default=True)
 
     #################### Path args ####################
     path_args = parser.add_argument_group("Path args")
@@ -86,8 +89,8 @@ def get_arg_parser():
     train_args.add_argument("--random_seed", type=int, default=1234)
     train_args.add_argument("--num_cross_folds", type=int, default=5)
     train_args.add_argument("--min_seq_size", type=int, default=11)  # +1 for cls
-    # train_args.add_argument("--max_seq_size", type=int, default=8192)  # +1 for cls
-    train_args.add_argument("--max_seq_size", type=int, default=101)  # +1 for cls
+    # train_args.add_argument("--max_seq_size", type=int, default=101)  # +1 for cls
+    train_args.add_argument("--max_seq_size", type=int, default=512)  # +1 for cls
     train_args.add_argument("--pretrain_train_batch_size", type=int, default=1024)
     train_args.add_argument("--pretrain_test_batch_size", type=int, default=2048)
     train_args.add_argument("--pretrain_max_num_evals", type=int, default=100)
@@ -336,9 +339,21 @@ def get_args():
         args.wandb_name = "debug"
 
     # wandb
+    assert not (args.use_wandb and args.use_finetune_wandb)
     if args.use_wandb:
         wandb.init(
             project=args.wandb_project,
+            name=args.wandb_name,
+            tags=args.wandb_tags,
+            config=args,
+        )
+    elif args.use_finetune_wandb:
+        assert args.train_mode == "finetune_only" or (
+            args.train_mode == "finetune_only_from_pretrained_weight"
+            and args.pretrained_weight_n_eval != -1
+        )
+        wandb.init(
+            project=args.finetune_wandb_project,
             name=args.wandb_name,
             tags=args.wandb_tags,
             config=args,
