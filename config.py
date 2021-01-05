@@ -303,10 +303,6 @@ def get_args():
     else:
         args.device = "cpu"
 
-    # get weight path
-    args.weight_path = f"{args.weight_base_path}/{args.model}/{args.wandb_name}"
-    os.makedirs(args.weight_path, exist_ok=True)
-
     # get all features
     args.all_features = args.input_features + args.targets
     args.all_features.sort()
@@ -403,6 +399,10 @@ def get_args():
             tags=args.wandb_tags,
             config=args,
         )
+
+    # get weight path
+    args.weight_path = f"{args.weight_base_path}/{args.model}/{args.wandb_name}"
+    os.makedirs(args.weight_path, exist_ok=True)
 
     return args, parser
 
