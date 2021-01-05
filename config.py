@@ -209,65 +209,61 @@ def get_arg_parser():
         choices=["am", "bert", "electra", "electra-reformer"],
         default="electra-reformer",
     )
-    model = parser.parse_args().model
-    if model == "am":
-        model_args.add_argument("--num_layers", type=int, default=2)
-        model_args.add_argument("--d_model", type=int, default=256)
-        model_args.add_argument("--num_heads", type=int, default=8)
-        model_args.add_argument("--dropout", type=float, default=0.2)
-    elif model == "electra":
-        model_args.add_argument("--embedding_size", type=int, default=256)
-        model_args.add_argument("--hidden_size", type=int, default=256)
-        model_args.add_argument(
-            "--intermediate_size", type=int, default=1024
-        )  # 4 * hidden_size
-        model_args.add_argument("--num_hidden_layers", type=int, default=2)
-        model_args.add_argument("--num_attention_heads", type=int, default=8)
-        model_args.add_argument("--hidden_act", type=str, default="gelu")
-        model_args.add_argument("--hidden_dropout_prob", type=float, default=0.1)
-        model_args.add_argument(
-            "--attention_probs_dropout_prob", type=float, default=0.1
-        )
-    elif model == "electra-reformer":
-        model_args.add_argument("--axial_pos_embds", type=str2bool, default=True)
-        model_args.add_argument(
-            "--axial_pos_shape", type=int, nargs="+", default=[64, 64]
-        )
-        model_args.add_argument(
-            "--axial_pos_embds_dim", type=int, nargs="+", default=[64, 192]
-        )
-        model_args.add_argument("--hidden_size", type=int, default=256)
-        model_args.add_argument(
-            "--hidden_act", type=str, choices=["relu", "gelu"], default="relu"
-        )
-        model_args.add_argument("--hidden_dropout_prob", type=float, default=0.05)
-        model_args.add_argument("--feed_forward_size", type=int, default=1024)
-        model_args.add_argument("--attention_head_size", type=int, default=64)
-        model_args.add_argument(
-            "--attn_layers",
-            type=str,
-            choices=["local", "lsh"],
-            nargs="+",
-            # default=["local", "lsh", "local", "lsh", "local", "lsh"],
-            default=["local", "lsh", "local", "lsh"],
-        )
-        model_args.add_argument("--num_attention_heads", type=int, default=12)
-        model_args.add_argument("--local_attn_chunk_length", type=int, default=64)
-        model_args.add_argument(
-            "--local_attention_probs_dropout_prob", type=float, default=0.05
-        )
-        model_args.add_argument("--local_num_chunks_before", type=int, default=1)
-        model_args.add_argument("--local_num_chunks_after", type=int, default=0)
-        model_args.add_argument("--lsh_attn_chunk_length", type=int, default=64)
-        model_args.add_argument(
-            "--lsh_attention_probs_dropout_prob", type=float, default=0
-        )
-        model_args.add_argument("--lsh_num_chunks_before", type=int, default=1)
-        model_args.add_argument("--lsh_num_chunks_after", type=int, default=0)
-        model_args.add_argument("--num_hashes", type=int, default=1)
-        model_args.add_argument("--num_buckets", default=None)
-        model_args.add_argument("--is_decoder", type=str2bool, default=False)
-        model_args.add_argument("--use_cache", type=str2bool, default=False)
+    # model = parser.parse_args().model
+    # if model == "am":
+    #     model_args.add_argument("--num_layers", type=int, default=2)
+    #     model_args.add_argument("--d_model", type=int, default=256)
+    #     model_args.add_argument("--num_heads", type=int, default=8)
+    #     model_args.add_argument("--dropout", type=float, default=0.2)
+    # elif model == "electra":
+    #     model_args.add_argument("--embedding_size", type=int, default=256)
+    #     model_args.add_argument("--hidden_size", type=int, default=256)
+    #     model_args.add_argument(
+    #         "--intermediate_size", type=int, default=1024
+    #     )  # 4 * hidden_size
+    #     model_args.add_argument("--num_hidden_layers", type=int, default=2)
+    #     model_args.add_argument("--num_attention_heads", type=int, default=8)
+    #     model_args.add_argument("--hidden_act", type=str, default="gelu")
+    #     model_args.add_argument("--hidden_dropout_prob", type=float, default=0.1)
+    #     model_args.add_argument(
+    #         "--attention_probs_dropout_prob", type=float, default=0.1
+    #     )
+    # elif model == "electra-reformer":
+    model_args.add_argument("--axial_pos_embds", type=str2bool, default=True)
+    model_args.add_argument("--axial_pos_shape", type=int, nargs="+", default=[64, 64])
+    model_args.add_argument(
+        "--axial_pos_embds_dim", type=int, nargs="+", default=[64, 192]
+    )
+    model_args.add_argument("--hidden_size", type=int, default=256)
+    model_args.add_argument(
+        "--hidden_act", type=str, choices=["relu", "gelu"], default="relu"
+    )
+    model_args.add_argument("--hidden_dropout_prob", type=float, default=0.05)
+    model_args.add_argument("--feed_forward_size", type=int, default=1024)
+    model_args.add_argument("--attention_head_size", type=int, default=64)
+    model_args.add_argument(
+        "--attn_layers",
+        type=str,
+        choices=["local", "lsh"],
+        nargs="+",
+        # default=["local", "lsh", "local", "lsh", "local", "lsh"],
+        default=["local", "lsh", "local", "lsh"],
+    )
+    model_args.add_argument("--num_attention_heads", type=int, default=12)
+    model_args.add_argument("--local_attn_chunk_length", type=int, default=64)
+    model_args.add_argument(
+        "--local_attention_probs_dropout_prob", type=float, default=0.05
+    )
+    model_args.add_argument("--local_num_chunks_before", type=int, default=1)
+    model_args.add_argument("--local_num_chunks_after", type=int, default=0)
+    model_args.add_argument("--lsh_attn_chunk_length", type=int, default=64)
+    model_args.add_argument("--lsh_attention_probs_dropout_prob", type=float, default=0)
+    model_args.add_argument("--lsh_num_chunks_before", type=int, default=1)
+    model_args.add_argument("--lsh_num_chunks_after", type=int, default=0)
+    model_args.add_argument("--num_hashes", type=int, default=1)
+    model_args.add_argument("--num_buckets", default=None)
+    model_args.add_argument("--is_decoder", type=str2bool, default=False)
+    model_args.add_argument("--use_cache", type=str2bool, default=False)
 
     return parser
 
