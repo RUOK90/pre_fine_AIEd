@@ -252,7 +252,7 @@ def get_arg_parser():
         # default=["local", "lsh", "local", "lsh", "local", "lsh"],
         default=["local", "lsh", "local", "lsh"],
     )
-    model_args.add_argument("--num_attention_heads", type=int, default=12)
+    model_args.add_argument("--num_attention_heads", type=int, default=8)
     model_args.add_argument("--local_attn_chunk_length", type=int, default=64)
     model_args.add_argument(
         "--local_attention_probs_dropout_prob", type=float, default=0.05
@@ -319,34 +319,27 @@ def get_args():
     if args.max_seq_size == 512:
         args.axial_pos_shape = [16, 32]
         args.finetune_train_batch_size = 64
-        # args.finetune_test_batch_size = 256
-        args.finetune_test_batch_size = 128
+        args.finetune_test_batch_size = 256
         args.finetune_update_steps = 20
     elif args.max_seq_size == 1024:
         args.axial_pos_shape = [32, 32]
-        # args.finetune_train_batch_size = 64
-        # args.finetune_test_batch_size = 128
-        args.finetune_train_batch_size = 32
-        args.finetune_test_batch_size = 64
+        args.finetune_train_batch_size = 64
+        args.finetune_test_batch_size = 128
         args.finetune_update_steps = 20
     elif args.max_seq_size == 2048:
         args.axial_pos_shape = [32, 64]
-        # args.finetune_train_batch_size = 32
-        # args.finetune_test_batch_size = 64
-        args.finetune_train_batch_size = 16
-        args.finetune_test_batch_size = 32
+        args.finetune_train_batch_size = 32
+        args.finetune_test_batch_size = 64
         args.finetune_update_steps = 20
     elif args.max_seq_size == 4096:
         args.axial_pos_shape = [64, 64]
         args.finetune_train_batch_size = 8
-        # args.finetune_test_batch_size = 32
-        args.finetune_test_batch_size = 16
+        args.finetune_test_batch_size = 32
         args.finetune_update_steps = 20
     elif args.max_seq_size == 8192:
         args.axial_pos_shape = [64, 128]
         args.finetune_train_batch_size = 4
-        # args.finetune_test_batch_size = 16
-        args.finetune_test_batch_size = 8
+        args.finetune_test_batch_size = 16
         args.finetune_update_steps = 20
 
     # wandb setting
