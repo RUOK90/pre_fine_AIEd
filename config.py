@@ -63,7 +63,7 @@ def get_arg_parser():
         "--finetune_wandb_project", type=str, default="pre_fine_aied_finetune"
     )
     logging_args.add_argument("--wandb_name", type=str)
-    logging_args.add_argument("--wandb_tags")
+    logging_args.add_argument("--wandb_tags", default="none")
 
     #################### Path args ####################
     path_args = parser.add_argument_group("Path args")
@@ -276,49 +276,6 @@ def get_args():
     args = parser.parse_args()
     args.run_script = get_run_script()
 
-    # name
-    # input_masked_target
-    # args.wandb_name = ""
-    # # input
-    # if "is_correct" in args.input_features:
-    #     args.wandb_name += "ic-"
-    # if "is_on_time" in args.input_features:
-    #     args.wandb_name += "iot-"
-    # if "elapsed_time" in args.input_features:
-    #     args.wandb_name += "et-"
-    # if "lag_time" in args.input_features:
-    #     args.wandb_name += "lt-"
-    # args.wandb_name = args.wandb_name.rstrip("-") + "_"
-    # # target
-    # if "is_correct" in args.targets:
-    #     args.wandb_name += "ic-"
-    # if "is_on_time" in args.targets:
-    #     args.wandb_name += "iot-"
-    # if "elapsed_time" in args.targets:
-    #     args.wandb_name += "et-"
-    # if "lag_time" in args.targets:
-    #     args.wandb_name += "lt-"
-    # args.wandb_name = args.wandb_name.rstrip("-")
-    # args.wandb_name += (
-    #     f"_{args.gen_cate_target_sampling}_{args.gen_cont_target_sampling}"
-    # )
-    # if args.gen_cont_target_sampling == "none" and "elapsed_time" in args.targets:
-    #     args.wandb_name += f"_{args.time_output_func}_{args.time_loss}"
-
-    args.wandb_name = f"{args.train_mode}_{args.model}_{args.max_seq_size}"
-    if "local" in args.attn_layers and "lsh" in args.attn_layers:
-        args.wandb_name += f"_local_lsh"
-    elif "local" in args.attn_layers:
-        args.wandb_name += f"_local"
-    elif "lsh" in args.attn_layers:
-        args.wandb_name += f"_lsh"
-
-    # parse tags
-    args.wandb_tags = (
-        args.wandb_tags.split(",") if args.wandb_tags is not None else ["test"]
-    )
-    args.wandb_tags.append(args.wandb_name)
-
     # random seed
     set_random_seed(args.random_seed)
 
@@ -337,27 +294,6 @@ def get_args():
         args.finetune_max_num_evals = 3
         args.finetune_update_steps = 3
         args.wandb_name = "debug"
-
-    # wandb
-    assert not (args.use_wandb and args.use_finetune_wandb)
-    if args.use_wandb:
-        wandb.init(
-            project=args.wandb_project,
-            name=args.wandb_name,
-            tags=args.wandb_tags,
-            config=args,
-        )
-    elif args.use_finetune_wandb:
-        assert args.train_mode == "finetune_only" or (
-            args.train_mode == "finetune_only_from_pretrained_weight"
-            and args.pretrained_weight_n_eval != -1
-        )
-        wandb.init(
-            project=args.finetune_wandb_project,
-            name=args.wandb_name,
-            tags=args.wandb_tags,
-            config=args,
-        )
 
     # parse gpus
     if args.gpu is not None:
@@ -388,27 +324,85 @@ def get_args():
         args.axial_pos_shape = [16, 32]
         args.finetune_train_batch_size = 64
         args.finetune_test_batch_size = 256
-        args.finetune_update_steps = 10
+        args.finetune_update_steps = 20
     elif args.max_seq_size == 1024:
         args.axial_pos_shape = [32, 32]
         args.finetune_train_batch_size = 64
         args.finetune_test_batch_size = 128
-        args.finetune_update_steps = 10
+        args.finetune_update_steps = 20
     elif args.max_seq_size == 2048:
         args.axial_pos_shape = [32, 64]
         args.finetune_train_batch_size = 32
         args.finetune_test_batch_size = 64
-        args.finetune_update_steps = 10
+        args.finetune_update_steps = 20
     elif args.max_seq_size == 4096:
         args.axial_pos_shape = [64, 64]
         args.finetune_train_batch_size = 8
         args.finetune_test_batch_size = 32
-        args.finetune_update_steps = 10
+        args.finetune_update_steps = 20
     elif args.max_seq_size == 8192:
         args.axial_pos_shape = [64, 128]
         args.finetune_train_batch_size = 4
         args.finetune_test_batch_size = 16
-        args.finetune_update_steps = 10
+        args.finetune_update_steps = 20
+
+    # wandb setting
+    # input_masked_target
+    # args.wandb_name = ""
+    # # input
+    # if "is_correct" in args.input_features:
+    #     args.wandb_name += "ic-"
+    # if "is_on_time" in args.input_features:
+    #     args.wandb_name += "iot-"
+    # if "elapsed_time" in args.input_features:
+    #     args.wandb_name += "et-"
+    # if "lag_time" in args.input_features:
+    #     args.wandb_name += "lt-"
+    # args.wandb_name = args.wandb_name.rstrip("-") + "_"
+    # # target
+    # if "is_correct" in args.targets:
+    #     args.wandb_name += "ic-"
+    # if "is_on_time" in args.targets:
+    #     args.wandb_name += "iot-"
+    # if "elapsed_time" in args.targets:
+    #     args.wandb_name += "et-"
+    # if "lag_time" in args.targets:
+    #     args.wandb_name += "lt-"
+    # args.wandb_name = args.wandb_name.rstrip("-")
+    # args.wandb_name += (
+    #     f"_{args.gen_cate_target_sampling}_{args.gen_cont_target_sampling}"
+    # )
+    # if args.gen_cont_target_sampling == "none" and "elapsed_time" in args.targets:
+    #     args.wandb_name += f"_{args.time_output_func}_{args.time_loss}"
+
+    args.wandb_name = f"step_{args.finetune_update_steps}_chunk_{args.lsh_attn_chunk_length}_layer_{len(args.attn_layers)}_act_{args.hidden_act}_round_{num_hashes}"
+    if "local" in args.attn_layers and "lsh" in args.attn_layers:
+        args.wandb_name += f"_local_lsh"
+    elif "local" in args.attn_layers:
+        args.wandb_name += f"_local"
+    elif "lsh" in args.attn_layers:
+        args.wandb_name += f"_lsh"
+
+    # wandb
+    assert not (args.use_wandb and args.use_finetune_wandb)
+    if args.use_wandb:
+        wandb.init(
+            project=args.wandb_project,
+            name=args.wandb_name,
+            tags=args.wandb_tags,
+            config=args,
+        )
+    elif args.use_finetune_wandb:
+        assert args.train_mode == "finetune_only" or (
+            args.train_mode == "finetune_only_from_pretrained_weight"
+            and args.pretrained_weight_n_eval != -1
+        )
+        wandb.init(
+            project=args.finetune_wandb_project,
+            name=args.wandb_name,
+            tags=args.wandb_tags,
+            config=args,
+        )
 
     return args, parser
 
