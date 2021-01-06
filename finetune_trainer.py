@@ -30,7 +30,6 @@ class FineTuneTrainer:
     def _score_forward(self, dataloader, cross_num, mode):
         batch_results = {"loss": [], "l1": [], "lc_l1": [], "rc_l1": []}
 
-        batch_total_loss = 0
         for step, batch in enumerate(tqdm(dataloader)):
             batch_to_device(batch)
             outputs = self._model(batch["unmasked_feature"], batch["padding_mask"])
@@ -51,18 +50,14 @@ class FineTuneTrainer:
             rc_loss = self._bce_loss(
                 rc_logit, batch["label"]["rc"] / Const.SCORE_SCALING_FACTOR
             )
-            batch_total_loss += lc_loss + rc_loss
-            # batch_results["loss"].append(batch_total_loss.item())
+            batch_total_loss = lc_loss + rc_loss
+            batch_results["loss"].append(batch_total_loss.item())
 
-            # if self._model.training:
-            #     self._optim.update(batch_total_loss)
+            if self._model.training:
+                self._optim.update(batch_total_loss)
 
             if ARGS.debug_mode and step == ARGS.finetune_update_steps:
                 break
-
-        if self._model.training:
-            self._optim.update(batch_total_loss)
-        batch_results["loss"].append(batch_total_loss.item())
 
         # print, save model, and wandb output
         loss = np.mean(batch_results["loss"])

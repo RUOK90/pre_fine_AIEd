@@ -49,7 +49,7 @@ def get_arg_parser():
     #################### Base args ####################
     base_args = parser.add_argument_group("Base args")
     base_args.add_argument("--run_script")
-    base_args.add_argument("--debug_mode", type=str2bool, default=True)
+    base_args.add_argument("--debug_mode", type=str2bool, default=False)
     base_args.add_argument("--gpu", type=str, default="7")
     base_args.add_argument("--device", type=str)
     base_args.add_argument("--num_workers", type=int, default=4)
@@ -87,7 +87,7 @@ def get_arg_parser():
     #################### Train args ####################
     train_args = parser.add_argument_group("Train args")
     train_args.add_argument("--random_seed", type=int, default=1234)
-    train_args.add_argument("--num_cross_folds", type=int, default=5)
+    train_args.add_argument("--num_cross_folds", type=int, default=1)
     train_args.add_argument("--min_seq_size", type=int, default=11)  # +1 for cls
     # train_args.add_argument("--max_seq_size", type=int, default=101)  # +1 for cls
     train_args.add_argument("--max_seq_size", type=int, default=512)  # +1 for cls
@@ -249,17 +249,16 @@ def get_arg_parser():
         type=str,
         choices=["local", "lsh"],
         nargs="+",
-        # default=["local", "lsh", "local", "lsh", "local", "lsh"],
-        default=["local", "lsh", "local", "lsh"],
+        default=["lsh", "lsh", "lsh", "lsh"],
     )
     model_args.add_argument("--num_attention_heads", type=int, default=8)
-    model_args.add_argument("--local_attn_chunk_length", type=int, default=64)
+    model_args.add_argument("--local_attn_chunk_length", type=int, default=128)
     model_args.add_argument(
         "--local_attention_probs_dropout_prob", type=float, default=0.05
     )
     model_args.add_argument("--local_num_chunks_before", type=int, default=1)
     model_args.add_argument("--local_num_chunks_after", type=int, default=0)
-    model_args.add_argument("--lsh_attn_chunk_length", type=int, default=64)
+    model_args.add_argument("--lsh_attn_chunk_length", type=int, default=128)
     model_args.add_argument("--lsh_attention_probs_dropout_prob", type=float, default=0)
     model_args.add_argument("--lsh_num_chunks_before", type=int, default=1)
     model_args.add_argument("--lsh_num_chunks_after", type=int, default=0)
@@ -316,46 +315,54 @@ def get_args():
         assert set(args.masked_features) == set(args.targets)
 
     # settings
-    if args.max_seq_size == 512:
+    # args.max_seq_size = 256
+    # args.num_hashes = 8
+    if args.max_seq_size == 256:
+        args.axial_pos_shape = [16, 16]
+        args.finetune_update_steps = 20
+        if args.num_hashes == 1:
+            args.finetune_train_batch_size = 256
+        elif args.num_hashes == 2:
+            args.finetune_train_batch_size = 128
+        elif args.num_hashes == 4:
+            args.finetune_train_batch_size = 64
+        elif args.num_hashes == 8:
+            args.finetune_train_batch_size = 32
+    elif args.max_seq_size == 512:
         args.axial_pos_shape = [16, 32]
-        # args.finetune_train_batch_size = 4
-        # args.finetune_test_batch_size = 32
-        # args.finetune_update_steps = 10
-        args.finetune_train_batch_size = 1
-        args.finetune_test_batch_size = 8
-        args.finetune_update_steps = 256
+        args.finetune_update_steps = 20
+        if args.num_hashes == 1:
+            args.finetune_train_batch_size = 64
+        elif args.num_hashes == 2:
+            args.finetune_train_batch_size = 64
+        elif args.num_hashes == 4:
+            args.finetune_train_batch_size = 32
+        elif args.num_hashes == 8:
+            args.finetune_train_batch_size = 16
     elif args.max_seq_size == 1024:
         args.axial_pos_shape = [32, 32]
-        # args.finetune_train_batch_size = 8
-        # args.finetune_test_batch_size = 16
-        # args.finetune_update_steps = 10
-        args.finetune_train_batch_size = 1
-        args.finetune_test_batch_size = 8
-        args.finetune_update_steps = 256
+        args.finetune_update_steps = 20
+        if args.num_hashes == 1:
+            args.finetune_train_batch_size = 32
+        elif args.num_hashes == 2:
+            args.finetune_train_batch_size = 32
+        elif args.num_hashes == 4:
+            args.finetune_train_batch_size = 16
+        elif args.num_hashes == 8:
+            args.finetune_train_batch_size = 8
     elif args.max_seq_size == 2048:
         args.axial_pos_shape = [32, 64]
-        # args.finetune_train_batch_size = 4
-        # args.finetune_test_batch_size = 8
-        # args.finetune_update_steps = 10
-        args.finetune_train_batch_size = 1
-        args.finetune_test_batch_size = 8
-        args.finetune_update_steps = 256
-    elif args.max_seq_size == 4096:
-        args.axial_pos_shape = [64, 64]
-        # args.finetune_train_batch_size = 2
-        # args.finetune_test_batch_size = 4
-        # args.finetune_update_steps = 10
-        args.finetune_train_batch_size = 1
-        args.finetune_test_batch_size = 4
-        args.finetune_update_steps = 64
-    elif args.max_seq_size == 8192:
-        args.axial_pos_shape = [64, 128]
-        # args.finetune_train_batch_size = 1
-        # args.finetune_test_batch_size = 2
-        # args.finetune_update_steps = 10
-        args.finetune_train_batch_size = 1
-        args.finetune_test_batch_size = 2
-        args.finetune_update_steps = 64
+        args.finetune_update_steps = 20
+        if args.num_hashes == 1:
+            args.finetune_train_batch_size = 32
+        elif args.num_hashes == 2:
+            args.finetune_train_batch_size = 8
+        elif args.num_hashes == 4:
+            args.finetune_train_batch_size = 8
+        elif args.num_hashes == 8:
+            args.finetune_train_batch_size = 4
+
+    args.finetune_test_batch_size = 2 * args.finetune_train_batch_size
 
     # wandb setting
     # input_masked_target
