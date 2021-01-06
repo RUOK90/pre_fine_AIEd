@@ -393,13 +393,7 @@ def get_args():
     # if args.gen_cont_target_sampling == "none" and "elapsed_time" in args.targets:
     #     args.wandb_name += f"_{args.time_output_func}_{args.time_loss}"
 
-    args.wandb_name = f"step_{args.finetune_update_steps}_seq_{args.max_seq_size}_chunk_{args.lsh_attn_chunk_length}_layer_{len(args.attn_layers)}_act_{args.hidden_act}_round_{args.num_hashes}"
-    if "local" in args.attn_layers and "lsh" in args.attn_layers:
-        args.wandb_name += f"_local_lsh"
-    elif "local" in args.attn_layers:
-        args.wandb_name += f"_local"
-    elif "lsh" in args.attn_layers:
-        args.wandb_name += f"_lsh"
+    args.wandb_name = f"step_{args.finetune_update_steps}_seq_{args.max_seq_size}_chunk_{args.lsh_attn_chunk_length}_layer_{len(args.attn_layers)}_act_{args.hidden_act}_round_{args.num_hashes}_aug_{args.aug_mode}"
 
     # wandb
     assert not (args.use_wandb and args.use_finetune_wandb)
