@@ -87,10 +87,10 @@ def get_arg_parser():
     #################### Train args ####################
     train_args = parser.add_argument_group("Train args")
     train_args.add_argument("--random_seed", type=int, default=1234)
-    train_args.add_argument("--num_cross_folds", type=int, default=1)
+    train_args.add_argument("--num_cross_folds", type=int, default=5)
     train_args.add_argument("--min_seq_size", type=int, default=11)  # +1 for cls
-    # train_args.add_argument("--max_seq_size", type=int, default=101)  # +1 for cls
-    train_args.add_argument("--max_seq_size", type=int, default=512)  # +1 for cls
+    train_args.add_argument("--max_seq_size", type=int, default=101)  # +1 for cls
+    # train_args.add_argument("--max_seq_size", type=int, default=512)  # +1 for cls
     train_args.add_argument("--pretrain_train_batch_size", type=int, default=1024)
     train_args.add_argument("--pretrain_test_batch_size", type=int, default=2048)
     train_args.add_argument("--pretrain_max_num_evals", type=int, default=100)
@@ -209,7 +209,7 @@ def get_arg_parser():
     model_args.add_argument(
         "--model",
         type=str,
-        choices=["am", "bert", "electra", "electra-reformer"],
+        choices=["am", "bert", "electra", "electra-reformer", "electra-performer"],
         default="electra-reformer",
     )
     # model = parser.parse_args().model
