@@ -357,11 +357,11 @@ def get_args():
         args.finetune_train_batch_size = 16
     elif args.max_seq_size == 8192:
         args.axial_pos_shape = [64, 128]
-        args.finetune_update_steps = 10
+        args.finetune_update_steps = 20
         args.finetune_train_batch_size = 8
     elif args.max_seq_size == 16384:
         args.axial_pos_shape = [128, 128]
-        args.finetune_update_steps = 10
+        args.finetune_update_steps = 20
         args.finetune_train_batch_size = 4
 
     args.finetune_test_batch_size = 2 * args.finetune_train_batch_size
@@ -395,9 +395,7 @@ def get_args():
     # if args.gen_cont_target_sampling == "none" and "elapsed_time" in args.targets:
     #     args.wandb_name += f"_{args.time_output_func}_{args.time_loss}"
 
-    args.wandb_name = (
-        f"pf_seq_{args.max_seq_size}_layer_{args.num_hidden_layers}_aug_{args.aug_mode}"
-    )
+    args.wandb_name = f"pf_step_{args.finetune_update_steps}_seq_{args.max_seq_size}_layer_{args.num_hidden_layers}_aug_{args.aug_mode}"
 
     # wandb
     assert not (args.use_wandb and args.use_finetune_wandb)
