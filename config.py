@@ -397,7 +397,9 @@ def get_args():
     # if args.gen_cont_target_sampling == "none" and "elapsed_time" in args.targets:
     #     args.wandb_name += f"_{args.time_output_func}_{args.time_loss}"
 
-    args.wandb_name = f"performer_step_{args.finetune_update_steps}_seq_{args.max_seq_size}_layer_{args.num_hidden_layers}_aug_{args.aug_mode}"
+    args.wandb_name = (
+        f"pf_seq_{args.max_seq_size}_layer_{args.num_hidden_layers}_aug_{args.aug_mode}"
+    )
 
     # wandb
     assert not (args.use_wandb and args.use_finetune_wandb)
