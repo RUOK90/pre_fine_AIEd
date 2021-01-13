@@ -335,8 +335,6 @@ def get_args():
         assert set(args.masked_features) == set(args.targets)
 
     # settings
-    args.num_cross_folds = 1
-    args.max_seq_size = 256
     if args.max_seq_size == 256:
         args.axial_pos_shape = [16, 16]
         args.finetune_update_steps = 10
