@@ -89,8 +89,7 @@ def get_arg_parser():
     train_args.add_argument("--random_seed", type=int, default=1234)
     train_args.add_argument("--num_cross_folds", type=int, default=5)
     train_args.add_argument("--min_seq_size", type=int, default=11)  # +1 for cls
-    train_args.add_argument("--max_seq_size", type=int, default=128)  # +1 for cls
-    # train_args.add_argument("--max_seq_size", type=int, default=512)  # +1 for cls
+    train_args.add_argument("--max_seq_size", type=int, default=101)  # +1 for cls
     train_args.add_argument("--pretrain_train_batch_size", type=int, default=1024)
     train_args.add_argument("--pretrain_test_batch_size", type=int, default=2048)
     train_args.add_argument("--pretrain_max_num_evals", type=int, default=100)
@@ -98,7 +97,7 @@ def get_arg_parser():
     train_args.add_argument("--finetune_train_batch_size", type=int, default=256)
     train_args.add_argument("--finetune_test_batch_size", type=int, default=2048)
     train_args.add_argument("--finetune_max_num_evals", type=int, default=1000)
-    train_args.add_argument("--finetune_update_steps", type=int, default=5)
+    train_args.add_argument("--finetune_update_steps", type=int, default=10)
     train_args.add_argument("--finetune_patience", type=int, default=10)
     train_args.add_argument(
         "--optim", type=str, choices=["scheduled", "noam"], default="scheduled"
@@ -337,23 +336,23 @@ def get_args():
     # settings
     if args.max_seq_size == 256:
         args.axial_pos_shape = [16, 16]
-        args.finetune_update_steps = 20
+        args.finetune_update_steps = 10
         args.finetune_train_batch_size = 256
     elif args.max_seq_size == 512:
         args.axial_pos_shape = [16, 32]
-        args.finetune_update_steps = 20
+        args.finetune_update_steps = 10
         args.finetune_train_batch_size = 128
     elif args.max_seq_size == 1024:
         args.axial_pos_shape = [32, 32]
-        args.finetune_update_steps = 20
+        args.finetune_update_steps = 10
         args.finetune_train_batch_size = 64
     elif args.max_seq_size == 2048:
         args.axial_pos_shape = [32, 64]
-        args.finetune_update_steps = 20
+        args.finetune_update_steps = 10
         args.finetune_train_batch_size = 32
     elif args.max_seq_size == 4096:
         args.axial_pos_shape = [64, 64]
-        args.finetune_update_steps = 20
+        args.finetune_update_steps = 10
         args.finetune_train_batch_size = 16
     elif args.max_seq_size == 8192:
         args.axial_pos_shape = [64, 128]
@@ -361,7 +360,7 @@ def get_args():
         args.finetune_train_batch_size = 8
     elif args.max_seq_size == 16384:
         args.axial_pos_shape = [128, 128]
-        args.finetune_update_steps = 20
+        args.finetune_update_steps = 40
         args.finetune_train_batch_size = 4
 
     args.finetune_test_batch_size = 2 * args.finetune_train_batch_size
@@ -395,7 +394,11 @@ def get_args():
     # if args.gen_cont_target_sampling == "none" and "elapsed_time" in args.targets:
     #     args.wandb_name += f"_{args.time_output_func}_{args.time_loss}"
 
-    args.wandb_name = f"pf_step_{args.finetune_update_steps}_seq_{args.max_seq_size}_layer_{args.num_hidden_layers}_aug_{args.aug_mode}"
+    args.wandb_name = f"pf_step_{args.finetune_update_steps}_seq_{args.max_seq_size}_layer_{args.num_hidden_layers}_ga_{args.use_generalized_attn}_aug_{args.aug_mode}"
+    # model_args.add_argument("--use_generalized_attn", type=str2bool, default=False)
+    # model_args.add_argument("--use_scale_norm", type=str2bool, default=False)
+    # model_args.add_argument("--use_rezero", type=str2bool, default=False)
+    # model_args.add_argument("--use_glu", type=str2bool, default=False)
 
     # wandb
     assert not (args.use_wandb and args.use_finetune_wandb)
