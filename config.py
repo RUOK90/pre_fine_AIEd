@@ -394,7 +394,9 @@ def get_args():
     # if args.gen_cont_target_sampling == "none" and "elapsed_time" in args.targets:
     #     args.wandb_name += f"_{args.time_output_func}_{args.time_loss}"
 
-    args.wandb_name = f"pf_step_{args.finetune_update_steps}_seq_{args.max_seq_size}_layer_{args.num_hidden_layers}_ga_{args.use_generalized_attn}_aug_{args.aug_mode}"
+    args.wandb_name = f"pf_seq_{args.max_seq_size}_layer_{args.num_hidden_layers}_hd_{args.hidden_dropout_prob}_ad_{args.attn_probs_dropout_prob}_ga_{args.use_generalized_attn}_glu_{args.use_glu}_sn_{args.use_scale_norm}_rz_{args.use_rezero}"
+    # model_args.add_argument("--hidden_dropout_prob", type=float, default=0.0)
+    # model_args.add_argument("--attn_probs_dropout_prob", type=float, default=0.0)
     # model_args.add_argument("--use_generalized_attn", type=str2bool, default=False)
     # model_args.add_argument("--use_scale_norm", type=str2bool, default=False)
     # model_args.add_argument("--use_rezero", type=str2bool, default=False)
