@@ -1,6 +1,6 @@
-import dataset_util, score_dataset, ednet_dataset
-from am_network import PretrainModel, ScoreModel
-from electra import ElectraAIEdPretrainModel, ElectraAIEdFinetuneModel
+from datasets import ednet_dataset, score_dataset, dataset_util
+from models.am_network import PretrainModel, ScoreModel
+from models.electra import ElectraAIEdPretrainModel, ElectraAIEdFinetuneModel
 from trainer import Trainer
 from finetune_trainer import FineTuneTrainer
 from config import *
@@ -35,7 +35,11 @@ if __name__ == "__main__":
     if ARGS.model == "am":
         pretrain_model = PretrainModel()
         finetune_model = ScoreModel()
-    elif ARGS.model == "electra" or ARGS.model == "electra-reformer":
+    elif (
+        ARGS.model == "electra"
+        or ARGS.model == "electra-reformer"
+        or ARGS.model == "electra-performer"
+    ):
         pretrain_model = ElectraAIEdPretrainModel()
         finetune_model = ElectraAIEdFinetuneModel()
 

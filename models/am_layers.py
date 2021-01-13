@@ -6,7 +6,7 @@ import math
 
 import torch
 
-import config, am_util
+from models import am_util
 
 
 def scaled_dot_attention(query, key, value, mask=None, dropout=None):

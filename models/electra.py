@@ -3,7 +3,8 @@ from torch.distributions.categorical import Categorical
 from torch.distributions.normal import Normal
 import torch.nn.functional as F
 from transformers.models.electra.modeling_electra import *
-from modeling_reformer import *
+from models.modeling_reformer import *
+from models.performer_pytorch import *
 from config import *
 
 
@@ -66,6 +67,34 @@ class ElectraAIEdPretrainModel(nn.Module):
             gen_config = copy.deepcopy(dis_config)
             gen_config.feed_forward_size = int(dis_config.feed_forward_size / 4)
             gen_config.num_attention_heads = int(dis_config.num_attention_heads / 4)
+
+        if ARGS.model == "electra-performer":
+            dis_config = ElectraConfig()
+            dis_config.axial_pos_embds = ARGS.axial_pos_embds
+            dis_config.axial_pos_shape = tuple(ARGS.axial_pos_shape)
+            dis_config.axial_pos_embds_dim = tuple(ARGS.axial_pos_embds_dim)
+            dis_config.axial_norm_std = 1.0
+            dis_config.embedding_size = ARGS.embedding_size
+            dis_config.hidden_size = ARGS.hidden_size
+            dis_config.feedforward_mult = ARGS.feedforward_mult
+            dis_config.num_hidden_layers = ARGS.num_hidden_layers
+            dis_config.num_attn_heads = ARGS.num_attn_heads
+            dis_config.hidden_dropout_prob = ARGS.hidden_dropout_prob
+            dis_config.attn_probs_dropout_prob = ARGS.attn_probs_dropout_prob
+            dis_config.num_random_features = ARGS.num_random_features
+            dis_config.feature_redraw_interval = ARGS.feature_redraw_interval
+            dis_config.use_generalized_attn = ARGS.use_generalized_attn
+            dis_config.use_scale_norm = ARGS.use_scale_norm
+            dis_config.use_rezero = ARGS.use_rezero
+            dis_config.use_glu = ARGS.use_glu
+            dis_config.causal = ARGS.causal
+            dis_config.cross_attend = ARGS.cross_attend
+            dis_config.pad_token_id = Const.PAD_VAL
+            dis_config.max_position_embeddings = ARGS.max_seq_size
+
+            gen_config = copy.deepcopy(dis_config)
+            gen_config.hidden_size = int(dis_config.hidden_size / 4)
+            gen_config.num_attn_heads = int(dis_config.num_attn_heads / 4)
 
         self.embeds = ElectraAIEdEmbeddings(dis_config)
         self.gen_model = ElectraAIEdMaskedLM(gen_config)
@@ -135,6 +164,30 @@ class ElectraAIEdFinetuneModel(nn.Module):
             config.max_position_embeddings = ARGS.max_seq_size
             config.reformer_seed = ARGS.random_seed
 
+        elif ARGS.model == "electra-performer":
+            config = ElectraConfig()
+            config.axial_pos_embds = ARGS.axial_pos_embds
+            config.axial_pos_shape = tuple(ARGS.axial_pos_shape)
+            config.axial_pos_embds_dim = tuple(ARGS.axial_pos_embds_dim)
+            config.axial_norm_std = 1.0
+            config.embedding_size = ARGS.embedding_size
+            config.hidden_size = ARGS.hidden_size
+            config.feedforward_mult = ARGS.feedforward_mult
+            config.num_hidden_layers = ARGS.num_hidden_layers
+            config.num_attn_heads = ARGS.num_attn_heads
+            config.hidden_dropout_prob = ARGS.hidden_dropout_prob
+            config.attn_probs_dropout_prob = ARGS.attn_probs_dropout_prob
+            config.num_random_features = ARGS.num_random_features
+            config.feature_redraw_interval = ARGS.feature_redraw_interval
+            config.use_generalized_attn = ARGS.use_generalized_attn
+            config.use_scale_norm = ARGS.use_scale_norm
+            config.use_rezero = ARGS.use_rezero
+            config.use_glu = ARGS.use_glu
+            config.causal = ARGS.causal
+            config.cross_attend = ARGS.cross_attend
+            config.pad_token_id = Const.PAD_VAL
+            config.max_position_embeddings = ARGS.max_seq_size
+
         self.embeds = ElectraAIEdEmbeddings(config)
         self.dis_model = ElectraAIEdSequenceClassification(config)
 
@@ -161,12 +214,12 @@ class ElectraAIEdEmbeddings(ReformerPreTrainedModel):
                 feature_embeds_dict[feature] = nn.Linear(1, config.embedding_size)
         self.position_embeds = (
             AxialPositionEmbeddings(config)
-            if ARGS.model == "electra-reformer" and ARGS.axial_pos_embds
+            if ARGS.axial_pos_embds
             else nn.Embedding(config.max_position_embeddings, config.embedding_size)
         )
         self.feature_embeds = torch.nn.ModuleDict(feature_embeds_dict)
 
-        self.LayerNorm = nn.LayerNorm(config.embedding_size, eps=config.layer_norm_eps)
+        self.LayerNorm = nn.LayerNorm(config.embedding_size)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
         self.register_buffer(
@@ -204,6 +257,8 @@ class ElectraAIEdMaskedLM(ElectraPreTrainedModel):
             self.electra = ElectraAIEdModel(config)
         elif ARGS.model == "electra-reformer":
             self.electra = ReformerAIEdModel(config)
+        elif ARGS.model == "electra-performer":
+            self.electra = PerformerAIEdModel(config)
         self.generator_predictions = ElectraAIEdGeneratorPredictions(config)
 
         heads_dict = {}
@@ -273,6 +328,8 @@ class ElectraAIEdPreTraining(ElectraPreTrainedModel):
             self.electra = ElectraAIEdModel(config)
         elif ARGS.model == "electra-reformer":
             self.electra = ReformerAIEdModel(config)
+        elif ARGS.model == "electra-performer":
+            self.electra = PerformerAIEdModel(config)
         self.discriminator_predictions = ElectraAIEdDiscriminatorPredictions(config)
         self.init_weights()
 
@@ -291,6 +348,8 @@ class ElectraAIEdSequenceClassification(ElectraPreTrainedModel):
             self.electra = ElectraAIEdModel(config)
         elif ARGS.model == "electra-reformer":
             self.electra = ReformerAIEdModel(config)
+        elif ARGS.model == "electra-performer":
+            self.electra = PerformerAIEdModel(config)
         self.classifier = ElectraAIEdClassificationHead(config)
         self.init_weights()
 
@@ -370,11 +429,53 @@ class ReformerAIEdModel(ReformerPreTrainedModel):
         return hidden_states
 
 
+class PerformerAIEdModel(ElectraPreTrainedModel):
+    def __init__(self, config):
+        super(PerformerAIEdModel, self).__init__(config)
+        if config.embedding_size != config.hidden_size:
+            self.embeddings_project = nn.Linear(
+                config.embedding_size, config.hidden_size
+            )
+        self.encoder = Performer(
+            dim=config.hidden_size,
+            depth=config.num_hidden_layers,
+            heads=config.num_attn_heads,
+            local_attn_heads=0,
+            local_window_size=None,
+            causal=config.causal,
+            ff_mult=config.feedforward_mult,
+            nb_features=config.num_random_features,
+            feature_redraw_interval=config.feature_redraw_interval,
+            reversible=True,
+            ff_chunks=1,
+            generalized_attention=config.use_generalized_attn,
+            kernel_fn=nn.ReLU(),
+            qr_uniform_q=False,
+            use_scalenorm=config.use_scale_norm,
+            use_rezero=config.use_rezero,
+            ff_glu=config.use_glu,
+            ff_dropout=config.hidden_dropout_prob,
+            attn_dropout=config.attn_probs_dropout_prob,
+            cross_attend=config.cross_attend,
+            no_projection=False,
+        )
+        self.config = config
+        self.init_weights()
+
+    def forward(self, inputs, attention_masks):
+        hidden_states = inputs
+        if hasattr(self, "embeddings_project"):
+            hidden_states = self.embeddings_project(hidden_states)
+        hidden_states = self.encoder(hidden_states, **{"mask": attention_masks.bool()})
+
+        return (hidden_states,)
+
+
 class ElectraAIEdGeneratorPredictions(nn.Module):
     def __init__(self, config):
         super(ElectraAIEdGeneratorPredictions, self).__init__()
         self.config = config
-        if ARGS.model == "electra":
+        if ARGS.model == "electra" or ARGS.model == "electra-performer":
             self.dense = nn.Linear(config.hidden_size, config.embedding_size)
         elif ARGS.model == "electra-reformer":
             self.dense = nn.Linear(2 * config.hidden_size, config.embedding_size)
@@ -392,7 +493,7 @@ class ElectraAIEdDiscriminatorPredictions(nn.Module):
     def __init__(self, config):
         super(ElectraAIEdDiscriminatorPredictions, self).__init__()
         self.config = config
-        if ARGS.model == "electra":
+        if ARGS.model == "electra" or ARGS.model == "electra-performer":
             self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         elif ARGS.model == "electra-reformer":
             self.dense = nn.Linear(2 * config.hidden_size, config.hidden_size)
@@ -410,7 +511,7 @@ class ElectraAIEdClassificationHead(nn.Module):
     def __init__(self, config):
         super(ElectraAIEdClassificationHead, self).__init__()
         self.config = config
-        if ARGS.model == "electra":
+        if ARGS.model == "electra" or ARGS.model == "electra-performer":
             self.dense = nn.Linear(config.hidden_size, config.hidden_size)
         elif ARGS.model == "electra-reformer":
             self.dense = nn.Linear(2 * config.hidden_size, config.hidden_size)

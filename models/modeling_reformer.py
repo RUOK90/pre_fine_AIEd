@@ -137,7 +137,7 @@ class AxialPositionEmbeddings(nn.Module):
         self.axial_pos_embds_dim = config.axial_pos_embds_dim
         self.dropout = config.hidden_dropout_prob
 
-        self.least_common_mult_chunk_length = _get_least_common_mult_chunk_len(config)
+        # self.least_common_mult_chunk_length = _get_least_common_mult_chunk_len(config)  # bskim's modification for using AxialPositionEmbeddings in any models
         self.weights = nn.ParameterList()
 
         assert (

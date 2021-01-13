@@ -49,7 +49,7 @@ def get_arg_parser():
     #################### Base args ####################
     base_args = parser.add_argument_group("Base args")
     base_args.add_argument("--run_script")
-    base_args.add_argument("--debug_mode", type=str2bool, default=False)
+    base_args.add_argument("--debug_mode", type=str2bool, default=True)
     base_args.add_argument("--gpu", type=str, default="7")
     base_args.add_argument("--device", type=str)
     base_args.add_argument("--num_workers", type=int, default=4)
@@ -57,7 +57,7 @@ def get_arg_parser():
     #################### Logging args ####################
     logging_args = parser.add_argument_group("Logging args")
     logging_args.add_argument("--use_wandb", type=str2bool, default=False)
-    logging_args.add_argument("--use_finetune_wandb", type=str2bool, default=False)
+    logging_args.add_argument("--use_finetune_wandb", type=str2bool, default=True)
     logging_args.add_argument("--wandb_project", type=str, default="pre_fine_aied")
     logging_args.add_argument(
         "--finetune_wandb_project", type=str, default="pre_fine_aied_finetune"
@@ -89,7 +89,7 @@ def get_arg_parser():
     train_args.add_argument("--random_seed", type=int, default=1234)
     train_args.add_argument("--num_cross_folds", type=int, default=5)
     train_args.add_argument("--min_seq_size", type=int, default=11)  # +1 for cls
-    train_args.add_argument("--max_seq_size", type=int, default=101)  # +1 for cls
+    train_args.add_argument("--max_seq_size", type=int, default=128)  # +1 for cls
     # train_args.add_argument("--max_seq_size", type=int, default=512)  # +1 for cls
     train_args.add_argument("--pretrain_train_batch_size", type=int, default=1024)
     train_args.add_argument("--pretrain_test_batch_size", type=int, default=2048)
@@ -210,8 +210,29 @@ def get_arg_parser():
         "--model",
         type=str,
         choices=["am", "bert", "electra", "electra-reformer", "electra-performer"],
-        default="electra-reformer",
+        default="electra-performer",
     )
+    model_args.add_argument("--axial_pos_embds", type=str2bool, default=True)
+    model_args.add_argument("--axial_pos_shape", type=int, nargs="+", default=[8, 16])
+    model_args.add_argument(
+        "--axial_pos_embds_dim", type=int, nargs="+", default=[64, 192]
+    )
+    model_args.add_argument("--embedding_size", type=int, default=256)
+    model_args.add_argument("--hidden_size", type=int, default=256)
+    model_args.add_argument("--feedforward_mult", type=int, default=4)
+    model_args.add_argument("--num_hidden_layers", type=int, default=4)
+    model_args.add_argument("--num_attn_heads", type=int, default=8)
+    model_args.add_argument("--hidden_dropout_prob", type=float, default=0.0)
+    model_args.add_argument("--attn_probs_dropout_prob", type=float, default=0.0)
+    model_args.add_argument("--num_random_features", type=int, default=256)
+    model_args.add_argument("--feature_redraw_interval", type=int, default=1000)
+    model_args.add_argument("--use_generalized_attn", type=str2bool, default=False)
+    model_args.add_argument("--use_scale_norm", type=str2bool, default=False)
+    model_args.add_argument("--use_rezero", type=str2bool, default=False)
+    model_args.add_argument("--use_glu", type=str2bool, default=False)
+    model_args.add_argument("--causal", type=str2bool, default=False)
+    model_args.add_argument("--cross_attend", type=str2bool, default=False)
+
     # model = parser.parse_args().model
     # if model == "am":
     #     model_args.add_argument("--num_layers", type=int, default=2)
@@ -232,40 +253,35 @@ def get_arg_parser():
     #         "--attention_probs_dropout_prob", type=float, default=0.1
     #     )
     # elif model == "electra-reformer":
-    model_args.add_argument("--axial_pos_embds", type=str2bool, default=True)
-    model_args.add_argument("--axial_pos_shape", type=int, nargs="+", default=[64, 64])
-    model_args.add_argument(
-        "--axial_pos_embds_dim", type=int, nargs="+", default=[64, 192]
-    )
-    model_args.add_argument("--hidden_size", type=int, default=256)
-    model_args.add_argument(
-        "--hidden_act", type=str, choices=["relu", "gelu"], default="relu"
-    )
-    model_args.add_argument("--hidden_dropout_prob", type=float, default=0.05)
-    model_args.add_argument("--feed_forward_size", type=int, default=1024)
-    model_args.add_argument("--attention_head_size", type=int, default=64)
-    model_args.add_argument(
-        "--attn_layers",
-        type=str,
-        choices=["local", "lsh"],
-        nargs="+",
-        default=["lsh", "lsh", "lsh", "lsh"],
-    )
-    model_args.add_argument("--num_attention_heads", type=int, default=8)
-    model_args.add_argument("--local_attn_chunk_length", type=int, default=128)
-    model_args.add_argument(
-        "--local_attention_probs_dropout_prob", type=float, default=0.05
-    )
-    model_args.add_argument("--local_num_chunks_before", type=int, default=1)
-    model_args.add_argument("--local_num_chunks_after", type=int, default=0)
-    model_args.add_argument("--lsh_attn_chunk_length", type=int, default=128)
-    model_args.add_argument("--lsh_attention_probs_dropout_prob", type=float, default=0)
-    model_args.add_argument("--lsh_num_chunks_before", type=int, default=1)
-    model_args.add_argument("--lsh_num_chunks_after", type=int, default=0)
-    model_args.add_argument("--num_hashes", type=int, default=1)
-    model_args.add_argument("--num_buckets", default=None)
-    model_args.add_argument("--is_decoder", type=str2bool, default=False)
-    model_args.add_argument("--use_cache", type=str2bool, default=False)
+    #     model_args.add_argument("--hidden_size", type=int, default=256)
+    #     model_args.add_argument(
+    #         "--hidden_act", type=str, choices=["relu", "gelu"], default="relu"
+    #     )
+    #     model_args.add_argument("--hidden_dropout_prob", type=float, default=0.05)
+    #     model_args.add_argument("--feed_forward_size", type=int, default=1024)
+    #     model_args.add_argument("--attention_head_size", type=int, default=64)
+    #     model_args.add_argument(
+    #         "--attn_layers",
+    #         type=str,
+    #         choices=["local", "lsh"],
+    #         nargs="+",
+    #         default=["lsh", "lsh", "lsh", "lsh"],
+    #     )
+    #     model_args.add_argument("--num_attention_heads", type=int, default=8)
+    #     model_args.add_argument("--local_attn_chunk_length", type=int, default=128)
+    #     model_args.add_argument(
+    #         "--local_attention_probs_dropout_prob", type=float, default=0.05
+    #     )
+    #     model_args.add_argument("--local_num_chunks_before", type=int, default=1)
+    #     model_args.add_argument("--local_num_chunks_after", type=int, default=0)
+    #     model_args.add_argument("--lsh_attn_chunk_length", type=int, default=128)
+    #     model_args.add_argument("--lsh_attention_probs_dropout_prob", type=float, default=0)
+    #     model_args.add_argument("--lsh_num_chunks_before", type=int, default=1)
+    #     model_args.add_argument("--lsh_num_chunks_after", type=int, default=0)
+    #     model_args.add_argument("--num_hashes", type=int, default=1)
+    #     model_args.add_argument("--num_buckets", default=None)
+    #     model_args.add_argument("--is_decoder", type=str2bool, default=False)
+    #     model_args.add_argument("--use_cache", type=str2bool, default=False)
 
     return parser
 
@@ -311,56 +327,44 @@ def get_args():
         assert args.time_output_func == "sigmoid"
 
     # electra sanity check
-    if args.model == "electra":
+    if (
+        args.model == "electra"
+        or args.model == "electra-reformer"
+        or args.model == "electra-performer"
+    ):
         assert set(args.masked_features) == set(args.targets)
 
     # settings
-    # args.max_seq_size = 256
-    # args.num_hashes = 8
+    args.num_cross_folds = 1
+    args.max_seq_size = 256
     if args.max_seq_size == 256:
         args.axial_pos_shape = [16, 16]
-        args.finetune_update_steps = 20
-        if args.num_hashes == 1:
-            args.finetune_train_batch_size = 256
-        elif args.num_hashes == 2:
-            args.finetune_train_batch_size = 128
-        elif args.num_hashes == 4:
-            args.finetune_train_batch_size = 64
-        elif args.num_hashes == 8:
-            args.finetune_train_batch_size = 32
+        args.finetune_update_steps = 10
+        args.finetune_train_batch_size = 256
     elif args.max_seq_size == 512:
         args.axial_pos_shape = [16, 32]
-        args.finetune_update_steps = 20
-        if args.num_hashes == 1:
-            args.finetune_train_batch_size = 64
-        elif args.num_hashes == 2:
-            args.finetune_train_batch_size = 64
-        elif args.num_hashes == 4:
-            args.finetune_train_batch_size = 32
-        elif args.num_hashes == 8:
-            args.finetune_train_batch_size = 16
+        args.finetune_update_steps = 10
+        args.finetune_train_batch_size = 128
     elif args.max_seq_size == 1024:
         args.axial_pos_shape = [32, 32]
-        args.finetune_update_steps = 20
-        if args.num_hashes == 1:
-            args.finetune_train_batch_size = 32
-        elif args.num_hashes == 2:
-            args.finetune_train_batch_size = 32
-        elif args.num_hashes == 4:
-            args.finetune_train_batch_size = 16
-        elif args.num_hashes == 8:
-            args.finetune_train_batch_size = 8
+        args.finetune_update_steps = 10
+        args.finetune_train_batch_size = 64
     elif args.max_seq_size == 2048:
         args.axial_pos_shape = [32, 64]
-        args.finetune_update_steps = 20
-        if args.num_hashes == 1:
-            args.finetune_train_batch_size = 32
-        elif args.num_hashes == 2:
-            args.finetune_train_batch_size = 8
-        elif args.num_hashes == 4:
-            args.finetune_train_batch_size = 8
-        elif args.num_hashes == 8:
-            args.finetune_train_batch_size = 4
+        args.finetune_update_steps = 10
+        args.finetune_train_batch_size = 32
+    elif args.max_seq_size == 4096:
+        args.axial_pos_shape = [64, 64]
+        args.finetune_update_steps = 10
+        args.finetune_train_batch_size = 16
+    elif args.max_seq_size == 8192:
+        args.axial_pos_shape = [64, 128]
+        args.finetune_update_steps = 10
+        args.finetune_train_batch_size = 8
+    elif args.max_seq_size == 16384:
+        args.axial_pos_shape = [128, 128]
+        args.finetune_update_steps = 10
+        args.finetune_train_batch_size = 4
 
     args.finetune_test_batch_size = 2 * args.finetune_train_batch_size
 
@@ -393,7 +397,7 @@ def get_args():
     # if args.gen_cont_target_sampling == "none" and "elapsed_time" in args.targets:
     #     args.wandb_name += f"_{args.time_output_func}_{args.time_loss}"
 
-    args.wandb_name = f"step_{args.finetune_update_steps}_seq_{args.max_seq_size}_chunk_{args.lsh_attn_chunk_length}_layer_{len(args.attn_layers)}_act_{args.hidden_act}_round_{args.num_hashes}_aug_{args.aug_mode}"
+    args.wandb_name = f"performer_step_{args.finetune_update_steps}_seq_{args.max_seq_size}_layer_{args.num_hidden_layers}_aug_{args.aug_mode}"
 
     # wandb
     assert not (args.use_wandb and args.use_finetune_wandb)

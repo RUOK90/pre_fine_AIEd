@@ -1,6 +1,4 @@
-import torch
-
-import am_layers
+from models import am_layers
 from config import *
 
 
