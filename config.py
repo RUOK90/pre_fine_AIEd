@@ -337,23 +337,23 @@ def get_args():
     # settings
     if args.max_seq_size == 256:
         args.axial_pos_shape = [16, 16]
-        args.finetune_update_steps = 10
+        args.finetune_update_steps = 20
         args.finetune_train_batch_size = 256
     elif args.max_seq_size == 512:
         args.axial_pos_shape = [16, 32]
-        args.finetune_update_steps = 10
+        args.finetune_update_steps = 20
         args.finetune_train_batch_size = 128
     elif args.max_seq_size == 1024:
         args.axial_pos_shape = [32, 32]
-        args.finetune_update_steps = 10
+        args.finetune_update_steps = 20
         args.finetune_train_batch_size = 64
     elif args.max_seq_size == 2048:
         args.axial_pos_shape = [32, 64]
-        args.finetune_update_steps = 10
+        args.finetune_update_steps = 20
         args.finetune_train_batch_size = 32
     elif args.max_seq_size == 4096:
         args.axial_pos_shape = [64, 64]
-        args.finetune_update_steps = 10
+        args.finetune_update_steps = 20
         args.finetune_train_batch_size = 16
     elif args.max_seq_size == 8192:
         args.axial_pos_shape = [64, 128]
