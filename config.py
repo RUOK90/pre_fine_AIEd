@@ -386,13 +386,12 @@ def get_args():
     if args.time_loss == "bce":
         assert args.time_output_func == "sigmoid"
 
-    # electra sanity check
     if (
         args.model == "electra"
         or args.model == "electra-reformer"
         or args.model == "electra-performer"
     ):
-        assert set(args.masked_features) == set(args.targets)
+        args.targets = args.masked_features
 
     # wandb setting
     # input_masked_target
