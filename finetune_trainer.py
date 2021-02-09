@@ -18,6 +18,7 @@ class FineTuneTrainer:
         self._dataloaders = dataloaders
 
         self._bce_loss = nn.BCEWithLogitsLoss(reduction="mean")
+        self._mse_loss = nn.MSELoss(reduction="mean")
         self._l1_loss = nn.L1Loss(reduction="none")
         self._best_val_perf = None
         self._test_perf = None
@@ -44,12 +45,21 @@ class FineTuneTrainer:
             batch_results["lc_l1"].extend(lc_l1.detach().cpu().numpy())
             batch_results["rc_l1"].extend(rc_l1.detach().cpu().numpy())
             batch_results["l1"].extend(l1.detach().cpu().numpy())
-            lc_loss = self._bce_loss(
-                lc_logit, batch["label"]["lc"] / Const.SCORE_SCALING_FACTOR
-            )
-            rc_loss = self._bce_loss(
-                rc_logit, batch["label"]["rc"] / Const.SCORE_SCALING_FACTOR
-            )
+            if ARGS.score_loss == "bce":
+                lc_loss = self._bce_loss(
+                    lc_logit, batch["label"]["lc"] / Const.SCORE_SCALING_FACTOR
+                )
+                rc_loss = self._bce_loss(
+                    rc_logit, batch["label"]["rc"] / Const.SCORE_SCALING_FACTOR
+                )
+            elif ARGS.score_loss == "mse":
+                lc_loss = self._mse_loss(
+                    lc_output, batch["label"]["lc"] / Const.SCORE_SCALING_FACTOR
+                )
+                rc_loss = self._mse_loss(
+                    rc_output, batch["label"]["rc"] / Const.SCORE_SCALING_FACTOR
+                )
+
             batch_total_loss = lc_loss + rc_loss
             batch_results["loss"].append(batch_total_loss.item())
 

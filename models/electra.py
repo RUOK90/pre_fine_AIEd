@@ -103,7 +103,9 @@ class ElectraAIEdPretrainModel(nn.Module):
     def forward(self, unmasked_features, masked_features, input_masks, padding_masks):
         attention_masks = (~padding_masks).long()
         gen_embeds = self.embeds(masked_features)
-        gen_outputs = self.gen_model(gen_embeds, attention_masks)
+        gen_outputs = self.gen_model(
+            gen_embeds, attention_masks, self.embeds.feature_embeds
+        )
         dis_inputs, dis_labels = get_dis_inputs_labels(
             unmasked_features, input_masks, gen_outputs
         )
@@ -264,38 +266,29 @@ class ElectraAIEdMaskedLM(ElectraPreTrainedModel):
         heads_dict = {}
         for target in ARGS.targets:
             if target in Const.CATE_VARS:
-                heads_dict[f"{target}_logit_head"] = nn.Linear(
-                    config.embedding_size,
-                    Const.FEATURE_SIZE[target] + 1,  # +1 for cls
-                )
                 heads_dict[f"{target}_output_head"] = nn.Softmax(dim=-1)
             elif target in Const.CONT_VARS:
-                if ARGS.gen_cont_target_sampling == "normal":
-                    heads_dict[f"{target}_logit_head"] = nn.Linear(
-                        config.embedding_size, 2
-                    )
+                if ARGS.time_output_func == "identity":
                     heads_dict[f"{target}_output_head"] = nn.Identity()
-                elif ARGS.gen_cont_target_sampling == "none":
-                    heads_dict[f"{target}_logit_head"] = nn.Linear(
-                        config.embedding_size, 1
-                    )
-                    if ARGS.time_output_func == "identity":
-                        heads_dict[f"{target}_output_head"] = nn.Identity()
-                    elif ARGS.time_output_func == "sigmoid":
-                        heads_dict[f"{target}_output_head"] = nn.Sigmoid()
-
+                elif ARGS.time_output_func == "sigmoid":
+                    heads_dict[f"{target}_output_head"] = nn.Sigmoid()
         self.heads = torch.nn.ModuleDict(heads_dict)
 
         self.init_weights()
 
-    def forward(self, inputs, attention_masks):
+    def forward(self, inputs, attention_masks, feature_embeds):
         generator_sequence_output = self.electra(inputs, attention_masks)[0]
         prediction_scores = self.generator_predictions(generator_sequence_output)
 
         outputs = {}
         for target in ARGS.targets:
             if target in Const.CATE_VARS:
-                logit = self.heads[f"{target}_logit_head"](prediction_scores)
+                logit = torch.matmul(
+                    prediction_scores,
+                    feature_embeds[target]
+                    .weight[1 : 2 + Const.FEATURE_SIZE[target]]
+                    .t(),
+                )  # since 0 idx is for padding, idx starts from 1
                 if ARGS.gen_cate_target_sampling == "categorical":
                     output = (
                         Categorical(self.heads[f"{target}_output_head"](logit)).sample()
@@ -306,16 +299,10 @@ class ElectraAIEdMaskedLM(ElectraPreTrainedModel):
                         logit.max(dim=-1)[1] + 1
                     )  # +1 since the var starts from 1, not 0
             elif target in Const.CONT_VARS:
-                logit = self.heads[f"{target}_logit_head"](prediction_scores).squeeze(
-                    -1
-                )
-                if ARGS.gen_cont_target_sampling == "normal":
-                    mu = logit[:, :, 0]
-                    std = F.softplus(logit[:, :, 1])
-                    logit = (mu, std)
-                    output = torch.clamp(Normal(mu, std).sample(), min=0, max=1)
-                elif ARGS.gen_cont_target_sampling == "none":
-                    output = self.heads[f"{target}_output_head"](logit).squeeze(-1)
+                logit = torch.matmul(
+                    prediction_scores, feature_embeds[target].weight
+                ).squeeze(-1)
+                output = self.heads[f"{target}_output_head"](logit)
             outputs[target] = (logit, output)
 
         return outputs

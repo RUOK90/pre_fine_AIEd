@@ -67,16 +67,11 @@ class Trainer:
                     )
                     loss = self._ce_loss(logit, label)
                 elif target in Const.CONT_VARS:
-                    if ARGS.gen_cont_target_sampling == "normal":
-                        mu = logit[0].masked_select(batch["input_mask"])
-                        std = logit[1].masked_select(batch["input_mask"])
-                        loss = -Normal(mu, std).log_prob(label).mean()
-                    elif ARGS.gen_cont_target_sampling == "none":
-                        logit = logit.masked_select(batch["input_mask"])
-                        if ARGS.time_loss == "bce":
-                            loss = self._bce_loss(logit, label)
-                        elif ARGS.time_loss == "mse":
-                            loss = ARGS.time_loss_lambda * self._mse_loss(output, label)
+                    logit = logit.masked_select(batch["input_mask"])
+                    if ARGS.time_loss == "bce":
+                        loss = self._bce_loss(logit, label)
+                    elif ARGS.time_loss == "mse":
+                        loss = ARGS.time_loss_lambda * self._mse_loss(output, label)
                 gen_total_loss += loss
                 batch_results[target]["loss"].append(loss.item())
 
@@ -160,6 +155,7 @@ class Trainer:
                     print(f"\nPretraining n_eval: {n_eval:03d}")
                     pretrained_weight_path = f"{ARGS.weight_path}/{n_eval}.pt"
                     self._finetune_trainer._train(pretrained_weight_path, n_eval, False)
+                # get finetune test performance
                 self._get_best_val_n_eval()
             else:
                 n_eval = ARGS.pretrained_weight_n_eval

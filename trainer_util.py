@@ -52,34 +52,15 @@ def get_optimizer(model, optimizer):
 
 def batch_to_device(batch):
     for group_name, group in batch.items():
-        if group_name == "unmasked_feature" or group_name == "masked_feature":
+        if (
+            group_name == "unmasked_feature"
+            or group_name == "masked_feature"
+            or group_name == "label"
+        ):
             for name, feature in batch[group_name].items():
-                if (
-                    name == "qid"
-                    or name == "part"
-                    or name == "is_correct"
-                    or name == "is_on_time"
-                ):
+                if name in Const.CATE_VARS:
                     batch[group_name][name] = feature.to(ARGS.device).long()
-
-                elif name == "elapsed_time" or name == "lag_time":
-                    batch[group_name][name] = feature.to(ARGS.device).float()
-
-        elif group_name == "label":
-            for name, feature in batch[group_name].items():
-                if (
-                    name == "qid"
-                    or name == "part"
-                    or name == "is_correct"
-                    or name == "is_on_time"
-                ):
-                    batch[group_name][name] = feature.to(ARGS.device).long()
-                elif (
-                    name == "elapsed_time"
-                    or name == "lag_time"
-                    or name == "lc"
-                    or name == "rc"
-                ):
+                elif name in Const.CONT_VARS:
                     batch[group_name][name] = feature.to(ARGS.device).float()
 
         elif group_name == "input_mask":
