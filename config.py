@@ -56,7 +56,7 @@ def get_arg_parser():
 
     #################### Logging args ####################
     logging_args = parser.add_argument_group("Logging args")
-    logging_args.add_argument("--use_wandb", type=str2bool, default=True)
+    logging_args.add_argument("--use_wandb", type=str2bool, default=False)
     logging_args.add_argument("--use_finetune_wandb", type=str2bool, default=False)
     logging_args.add_argument("--wandb_project", type=str, default="pre_fine_aied")
     logging_args.add_argument(

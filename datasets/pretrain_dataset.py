@@ -71,19 +71,19 @@ def preprocess_inters(q_info_dic, inters):
                 max(0, min(et / Const.MAX_ELAPSED_TIME_IN_S, 1))
                 for et in inters["elapsed_time_in_s"]
             ]
-        ),
+        ).astype(np.float64),
         "exp_time": np.array(
             [
                 max(0, min(et / Const.MAX_EXP_TIME_IN_S, 1))
                 for et in inters["exp_time_in_s"]
             ]
-        ),
+        ).astype(np.float64),
         "lag_time": np.array(
             [
                 max(0, min(lt / Const.MAX_LAG_TIME_IN_S, 1))
                 for lt in inters["lag_time_in_s"]
             ]
-        ),
+        ).astype(np.float64),
     }
 
     # get cls token appended all_features
