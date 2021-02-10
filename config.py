@@ -395,7 +395,7 @@ def get_args():
 
     # wandb setting
     # input_masked_target
-    args.wandb_name = f"{args.max_seq_size}_"
+    args.wandb_name = f"{args.max_seq_size}_{args.random_mask_ratio}"
     # input
     if "choice" in args.input_features:
         args.wandb_name += "ch-"
