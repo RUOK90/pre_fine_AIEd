@@ -411,17 +411,17 @@ def get_args():
         args.wandb_name += "ext-"
     args.wandb_name = args.wandb_name.rstrip("-") + "_"
     # target
-    if "choice" in args.input_features:
+    if "choice" in args.targets:
         args.wandb_name += "ch-"
-    if "is_correct" in args.input_features:
+    if "is_correct" in args.targets:
         args.wandb_name += "ic-"
-    if "elapsed_time" in args.input_features:
+    if "elapsed_time" in args.targets:
         args.wandb_name += "et-"
-    if "is_on_time" in args.input_features:
+    if "is_on_time" in args.targets:
         args.wandb_name += "it-"
-    if "lag_time" in args.input_features:
+    if "lag_time" in args.targets:
         args.wandb_name += "lt-"
-    if "exp_time" in args.input_features:
+    if "exp_time" in args.targets:
         args.wandb_name += "ext-"
     args.wandb_name = args.wandb_name.rstrip("-")
 
