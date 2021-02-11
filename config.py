@@ -396,6 +396,10 @@ def get_args():
     # wandb setting
     # input_masked_target
     args.wandb_name = f"{args.max_seq_size}_{args.random_mask_ratio}_"
+    if args.train_mode == "finetune_only":
+        args.wandb_name += "val_"
+    elif args.train_mode == "finetune_only_from_pretrained_weight":
+        args.wandb_name += "test_"
     # input
     if "choice" in args.input_features:
         args.wandb_name += "ch-"
