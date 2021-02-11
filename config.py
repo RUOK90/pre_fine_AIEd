@@ -406,6 +406,7 @@ def get_args():
         and args.pretrained_weight_n_eval != -1
     ):
         args.wandb_name += "test_"
+
     # input
     if "choice" in args.input_features:
         args.wandb_name += "ch-"
@@ -436,7 +437,7 @@ def get_args():
     args.wandb_name = args.wandb_name.rstrip("-")
 
     # get weight path
-    args.weight_path = f"{args.weight_base_path}/{args.model}/{args.wandb_name.rstrip('_val').rstrip('_test')}"
+    args.weight_path = f"{args.weight_base_path}/{args.model}/{args.wandb_name.replace('val_', '').replace('test_', '')}"
     os.makedirs(args.weight_path, exist_ok=True)
 
     # wandb
