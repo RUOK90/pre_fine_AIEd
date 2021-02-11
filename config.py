@@ -430,7 +430,7 @@ def get_args():
     args.wandb_name = args.wandb_name.rstrip("-")
 
     # get weight path
-    args.weight_path = f"{args.weight_base_path}/{args.model}/{args.wandb_name}"
+    args.weight_path = f"{args.weight_base_path}/{args.model}/{args.wandb_name.rstrip('_val').rstrip('_test')}"
     os.makedirs(args.weight_path, exist_ok=True)
 
     # wandb
