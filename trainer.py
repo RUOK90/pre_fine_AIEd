@@ -1,4 +1,5 @@
 import gc
+import time
 import wandb
 import torch
 import torch.nn as nn
@@ -192,7 +193,9 @@ class Trainer:
                 pretrained_weight_path = f"{ARGS.weight_path}/{n_eval}.pt"
                 torch.save(self._pretrain_model.state_dict(), pretrained_weight_path)
 
+                gc_start = time.time()
                 gc.collect()
+                print(f"gc duration: {time.time() - gc_start}")
 
                 if ARGS.train_mode == "both":
                     # finetune
