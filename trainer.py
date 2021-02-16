@@ -1,3 +1,4 @@
+import gc
 import wandb
 import torch
 import torch.nn as nn
@@ -190,6 +191,8 @@ class Trainer:
                 # save pretrained model
                 pretrained_weight_path = f"{ARGS.weight_path}/{n_eval}.pt"
                 torch.save(self._pretrain_model.state_dict(), pretrained_weight_path)
+
+                gc.collect()
 
                 if ARGS.train_mode == "both":
                     # finetune

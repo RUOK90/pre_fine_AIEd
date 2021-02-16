@@ -1,3 +1,4 @@
+import gc
 import wandb
 import torch
 import torch.nn as nn
@@ -144,6 +145,8 @@ class FineTuneTrainer:
                     self._model.load_state_dict(torch.load(self._finetuned_weight_path))
                     self._model.eval()
                     self._score_forward(dataloaders["test"], cross_num, "test")
+
+            gc.collect()
 
         # mean over cross validation split print and wandb output
         # print val outputs
