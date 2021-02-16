@@ -334,6 +334,20 @@ def get_args():
         args.finetune_train_batch_size = 64
         args.finetune_test_batch_size = 128
         args.finetune_max_num_evals = 500
+        args.finetune_update_steps = 10
+        args.finetune_patience = 30
+    elif args.max_seq_size == 2048:
+        args.axial_pos_shape = [32, 64]
+        args.finetune_train_batch_size = 32
+        args.finetune_test_batch_size = 64
+        args.finetune_max_num_evals = 500
+        args.finetune_update_steps = 10
+        args.finetune_patience = 30
+    elif args.max_seq_size == 4096:
+        args.axial_pos_shape = [64, 64]
+        args.finetune_train_batch_size = 16
+        args.finetune_test_batch_size = 32
+        args.finetune_max_num_evals = 500
         args.finetune_update_steps = 20
         args.finetune_patience = 30
     elif args.max_seq_size == 8192:
@@ -394,47 +408,50 @@ def get_args():
         args.targets = args.masked_features
 
     # wandb setting
-    # input_masked_target
-    args.wandb_name = f"{args.max_seq_size}_{args.random_mask_ratio}_"
-    if (
-        args.train_mode == "finetune_only_from_pretrained_weight"
-        and args.pretrained_weight_n_eval == -1
-    ):
-        args.wandb_name += "val_"
-    elif (
-        args.train_mode == "finetune_only_from_pretrained_weight"
-        and args.pretrained_weight_n_eval != -1
-    ):
-        args.wandb_name += "test_"
+    if args.train_mode == "finetune_only":
+        args.wandb_name = f"{args.max_seq_size}_{args.train_mode}_{args.score_loss}"
+    else:
+        # input_masked_target
+        args.wandb_name = f"{args.max_seq_size}_{args.random_mask_ratio}_"
+        if (
+            args.train_mode == "finetune_only_from_pretrained_weight"
+            and args.pretrained_weight_n_eval == -1
+        ):
+            args.wandb_name += "val_"
+        elif (
+            args.train_mode == "finetune_only_from_pretrained_weight"
+            and args.pretrained_weight_n_eval != -1
+        ):
+            args.wandb_name += "test_"
 
-    # input
-    if "choice" in args.input_features:
-        args.wandb_name += "ch-"
-    if "is_correct" in args.input_features:
-        args.wandb_name += "ic-"
-    if "elapsed_time" in args.input_features:
-        args.wandb_name += "et-"
-    if "is_on_time" in args.input_features:
-        args.wandb_name += "it-"
-    if "lag_time" in args.input_features:
-        args.wandb_name += "lt-"
-    if "exp_time" in args.input_features:
-        args.wandb_name += "ext-"
-    args.wandb_name = args.wandb_name.rstrip("-") + "_"
-    # target
-    if "choice" in args.targets:
-        args.wandb_name += "ch-"
-    if "is_correct" in args.targets:
-        args.wandb_name += "ic-"
-    if "elapsed_time" in args.targets:
-        args.wandb_name += "et-"
-    if "is_on_time" in args.targets:
-        args.wandb_name += "it-"
-    if "lag_time" in args.targets:
-        args.wandb_name += "lt-"
-    if "exp_time" in args.targets:
-        args.wandb_name += "ext-"
-    args.wandb_name = args.wandb_name.rstrip("-")
+        # input
+        if "choice" in args.input_features:
+            args.wandb_name += "ch-"
+        if "is_correct" in args.input_features:
+            args.wandb_name += "ic-"
+        if "elapsed_time" in args.input_features:
+            args.wandb_name += "et-"
+        if "is_on_time" in args.input_features:
+            args.wandb_name += "it-"
+        if "lag_time" in args.input_features:
+            args.wandb_name += "lt-"
+        if "exp_time" in args.input_features:
+            args.wandb_name += "ext-"
+        args.wandb_name = args.wandb_name.rstrip("-") + "_"
+        # target
+        if "choice" in args.targets:
+            args.wandb_name += "ch-"
+        if "is_correct" in args.targets:
+            args.wandb_name += "ic-"
+        if "elapsed_time" in args.targets:
+            args.wandb_name += "et-"
+        if "is_on_time" in args.targets:
+            args.wandb_name += "it-"
+        if "lag_time" in args.targets:
+            args.wandb_name += "lt-"
+        if "exp_time" in args.targets:
+            args.wandb_name += "ext-"
+        args.wandb_name = args.wandb_name.rstrip("-")
 
     # get weight path
     args.weight_path = f"{args.weight_base_path}/{args.model}/{args.wandb_name.replace('val_', '').replace('test_', '')}"

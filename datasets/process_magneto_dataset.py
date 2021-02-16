@@ -289,13 +289,13 @@ filtered_user_interactions_dic = get_filtered_user_interactions_dic(
 save_score_idxs_dic(filtered_user_interactions_dic, scores, 10, 5, "user_score_idxs")
 # check_score_idxs("user_score_idxs")
 
-save_user_interaction_windows_dic(
-    filtered_user_interactions_dic, scores, 15, 1023, 256, "user_interaction_windows"
-)
-
-save_user_interaction_windows_dic(
-    filtered_user_interactions_dic, scores, 15, 8191, 2048, "user_interaction_windows"
-)
+# save_user_interaction_windows_dic(
+#     filtered_user_interactions_dic, scores, 15, 1023, 256, "user_interaction_windows"
+# )
+#
+# save_user_interaction_windows_dic(
+#     filtered_user_interactions_dic, scores, 15, 8191, 2048, "user_interaction_windows"
+# )
 
 save_user_interaction_windows_dic(
     filtered_user_interactions_dic, scores, 15, 1023, 128, "user_interaction_windows"
