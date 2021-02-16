@@ -329,7 +329,7 @@ def get_args():
         args.axial_pos_shape = [32, 32]
         args.pretrain_train_batch_size = 64
         args.pretrain_test_batch_size = 128
-        args.pretrain_max_num_evals = 20
+        args.pretrain_max_num_evals = 40
         args.pretrain_update_steps = 5000
         args.finetune_train_batch_size = 64
         args.finetune_test_batch_size = 128
