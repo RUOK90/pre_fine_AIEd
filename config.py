@@ -50,9 +50,9 @@ def get_arg_parser():
     base_args = parser.add_argument_group("Base args")
     base_args.add_argument("--run_script")
     base_args.add_argument("--debug_mode", type=str2bool, default=False)
-    base_args.add_argument("--gpu", type=str, default="1")
+    base_args.add_argument("--gpu", type=str, default="6")
     base_args.add_argument("--device", type=str)
-    base_args.add_argument("--num_workers", type=int, default=4)
+    base_args.add_argument("--num_workers", type=int, default=2)
 
     #################### Logging args ####################
     logging_args = parser.add_argument_group("Logging args")
@@ -113,7 +113,7 @@ def get_arg_parser():
     train_args.add_argument("--finetune_update_steps", type=int, default=None)
     train_args.add_argument("--finetune_patience", type=int, default=None)
 
-    train_args.add_argument("--pretrain_resume_n_eval", type=int, default=-1)
+    train_args.add_argument("--pretrain_resume_n_eval", type=int, default=2)
     train_args.add_argument(
         "--optim", type=str, choices=["scheduled", "noam"], default="noam"
     )
@@ -437,7 +437,7 @@ def get_args():
         args.interaction_base_path = (
             f"/private/datasets/magneto_2021-01-27/user_interactions_wo_lecture.pkl"
         )
-        args.pretrain_base_path = args.pretrain_base_path.rstrip(".pkl") + "_debug.pkl"
+        # args.pretrain_base_path = args.pretrain_base_path.rstrip(".pkl") + "_debug.pkl"
         # args.score_base_path = (
         #     f"/private/datasets/magneto_2021-01-27/user_score_idxs_debug.pkl"
         # )
