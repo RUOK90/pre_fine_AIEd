@@ -147,9 +147,7 @@ class FineTuneTrainer:
                     self._model.eval()
                     self._score_forward(dataloaders["test"], cross_num, "test")
 
-            gc_start = time.time()
             gc.collect()
-            print(f"gc duration: {time.time() - gc_start}")
 
         # mean over cross validation split print and wandb output
         # print val outputs
