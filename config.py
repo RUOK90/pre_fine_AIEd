@@ -50,7 +50,7 @@ def get_arg_parser():
     base_args = parser.add_argument_group("Base args")
     base_args.add_argument("--run_script")
     base_args.add_argument("--debug_mode", type=str2bool, default=False)
-    base_args.add_argument("--gpu", type=str, default="7")
+    base_args.add_argument("--gpu", type=str, default="1")
     base_args.add_argument("--device", type=str)
     base_args.add_argument("--num_workers", type=int, default=4)
 
@@ -101,7 +101,7 @@ def get_arg_parser():
     # train_args.add_argument("--pretrain_max_num_evals", type=int, default=100)
     # train_args.add_argument("--pretrain_update_steps", type=int, default=350)
 
-    train_args.add_argument("--max_seq_size", type=int, default=8192)  # +1 for cls
+    train_args.add_argument("--max_seq_size", type=int, default=1024)  # +1 for cls
     train_args.add_argument("--pretrain_train_batch_size", type=int, default=None)
     train_args.add_argument("--pretrain_test_batch_size", type=int, default=None)
     train_args.add_argument("--pretrain_max_num_evals", type=int, default=None)
@@ -113,6 +113,7 @@ def get_arg_parser():
     train_args.add_argument("--finetune_update_steps", type=int, default=None)
     train_args.add_argument("--finetune_patience", type=int, default=None)
 
+    train_args.add_argument("--pretrain_resume_n_eval", type=int, default=-1)
     train_args.add_argument(
         "--optim", type=str, choices=["scheduled", "noam"], default="noam"
     )
@@ -363,31 +364,6 @@ def get_args():
         args.finetune_update_steps = 20
         args.finetune_patience = 30
 
-    # debug
-    if args.debug_mode:
-        args.num_workers = 0
-        args.num_cross_folds = 1
-        # args.interaction_base_path = f"/private/datasets/magneto_2021-01-27/user_interactions_wo_lecture_debug.pkl"
-        args.interaction_base_path = (
-            f"/private/datasets/magneto_2021-01-27/user_interactions_wo_lecture.pkl"
-        )
-        args.pretrain_base_path = args.pretrain_base_path.rstrip(".pkl") + "_debug.pkl"
-        # args.score_base_path = (
-        #     f"/private/datasets/magneto_2021-01-27/user_score_idxs_debug.pkl"
-        # )
-        args.score_base_path = (
-            f"/private/datasets/magneto_2021-01-27/user_score_idxs.pkl"
-        )
-        args.pretrain_train_batch_size = 8
-        args.pretrain_test_batch_size = 16
-        args.pretrain_max_num_evals = 3
-        args.pretrain_update_steps = 3
-        args.finetune_train_batch_size = 8
-        args.finetune_test_batch_size = 16
-        args.finetune_max_num_evals = 3
-        args.finetune_update_steps = 3
-        args.wandb_name = "debug"
-
     # parse gpus
     if args.gpu is not None:
         os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
@@ -452,6 +428,31 @@ def get_args():
         if "exp_time" in args.targets:
             args.wandb_name += "ext-"
         args.wandb_name = args.wandb_name.rstrip("-")
+
+    # debug
+    if args.debug_mode:
+        args.num_workers = 0
+        args.num_cross_folds = 1
+        # args.interaction_base_path = f"/private/datasets/magneto_2021-01-27/user_interactions_wo_lecture_debug.pkl"
+        args.interaction_base_path = (
+            f"/private/datasets/magneto_2021-01-27/user_interactions_wo_lecture.pkl"
+        )
+        args.pretrain_base_path = args.pretrain_base_path.rstrip(".pkl") + "_debug.pkl"
+        # args.score_base_path = (
+        #     f"/private/datasets/magneto_2021-01-27/user_score_idxs_debug.pkl"
+        # )
+        args.score_base_path = (
+            f"/private/datasets/magneto_2021-01-27/user_score_idxs.pkl"
+        )
+        args.pretrain_train_batch_size = 8
+        args.pretrain_test_batch_size = 16
+        args.pretrain_max_num_evals = 3
+        args.pretrain_update_steps = 3
+        args.finetune_train_batch_size = 8
+        args.finetune_test_batch_size = 16
+        args.finetune_max_num_evals = 3
+        args.finetune_update_steps = 3
+        args.wandb_name = "debug"
 
     # get weight path
     args.weight_path = f"{args.weight_base_path}/{args.model}/{args.wandb_name.replace('val_', '').replace('test_', '')}"

@@ -106,12 +106,12 @@ class FineTuneTrainer:
             self._test_perf = [np.inf for i in range(ARGS.num_cross_folds)]
 
         for cross_num, dataloaders in self._dataloaders.items():
+            set_random_seed(ARGS.random_seed)
             chained_train_dataloader = get_chained_dataloader(
                 dataloaders["train"], ARGS.finetune_max_num_evals
             )
-            set_random_seed(ARGS.random_seed)
             self._model = load_pretrained_weight(
-                self._dummy_model, pretrained_weight_path
+                self._dummy_model, pretrained_weight_path, False
             )
             self._optim = get_optimizer(self._model, ARGS.optim)
             for n_eval in range(ARGS.finetune_max_num_evals):

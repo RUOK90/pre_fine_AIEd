@@ -1,4 +1,5 @@
 import copy
+import pickle
 import torch
 import torch.optim as optim
 from itertools import chain
@@ -13,8 +14,18 @@ def get_chained_dataloader(dataloader, num_chaines):
     return chained_dataloader
 
 
-def load_pretrained_weight(model, weight_path):
-    model = copy.deepcopy(model)
+def load_optim_scheduler(scheduler, scheduler_path, scheduler_mode):
+    if scheduler_mode == "noam":
+        with open(scheduler_path, "rb") as f_r:
+            saved_scheduler = pickle.load(f_r)
+        scheduler.optimizer.load_state_dict(saved_scheduler.optimizer.state_dict())
+        scheduler._step = saved_scheduler._step
+
+
+def load_pretrained_weight(model, weight_path, resume_training):
+    if not resume_training:
+        model = copy.deepcopy(model)
+
     if weight_path is not None:
         model_dict = model.state_dict()
         pretrained_dict = torch.load(weight_path, map_location=ARGS.device)

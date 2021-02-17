@@ -1,5 +1,6 @@
 import gc
 import time
+import pickle
 import wandb
 import torch
 import torch.nn as nn
@@ -48,6 +49,7 @@ class Trainer:
             "label": [],
         }
 
+        gc_steps = 1000
         for step, batch in enumerate(tqdm(dataloader)):
             batch_to_device(batch)
             gen_outputs, dis_outputs, dis_labels = self._pretrain_model(
@@ -104,6 +106,9 @@ class Trainer:
 
             if ARGS.debug_mode and step == ARGS.pretrain_update_steps:
                 break
+
+            if (step + 1) % gc_steps == 0:
+                gc.collect()
 
         # print and wandb output
         # for generator outputs
@@ -169,11 +174,27 @@ class Trainer:
                 self._pretrain_dataloaders["train"], ARGS.pretrain_max_num_evals
             )
             for n_eval in range(ARGS.pretrain_max_num_evals):
-                print(f"\nPretraining n_eval: {n_eval:03d}")
-                self._cur_n_eval = n_eval
-
                 # set random seed
                 set_random_seed(ARGS.random_seed + n_eval)
+
+                # resume pretraining
+                if n_eval < ARGS.pretrain_resume_n_eval:
+                    for batch in islice(
+                        chained_train_dataloader, ARGS.pretrain_update_steps
+                    ):
+                        pass
+                    continue
+                elif n_eval == ARGS.pretrain_resume_n_eval:
+                    # load pretrained model and optimizer
+                    pretrained_weight_path = f"{ARGS.weight_path}/{n_eval - 1}.pt"
+                    optimizer_path = f"{ARGS.weight_path}/{n_eval - 1}_opt.pkl"
+                    load_pretrained_weight(
+                        self._pretrain_model, pretrained_weight_path, True
+                    )
+                    load_optim_scheduler(self._optim, optimizer_path, ARGS.optim)
+
+                print(f"\nPretraining n_eval: {n_eval:03d}")
+                self._cur_n_eval = n_eval
 
                 # pretrain train
                 self._pretrain_model.train()
@@ -183,15 +204,20 @@ class Trainer:
                     "train",
                 )
 
+                gc.collect()
+
                 # pretrain val
                 print("pretraining validation")
                 with torch.no_grad():
                     self._pretrain_model.eval()
                     self._pretrain(self._pretrain_dataloaders["val"], "val")
 
-                # save pretrained model
+                # save pretrained model and optimizer
                 pretrained_weight_path = f"{ARGS.weight_path}/{n_eval}.pt"
+                optimizer_path = f"{ARGS.weight_path}/{n_eval}_opt.pkl"
                 torch.save(self._pretrain_model.state_dict(), pretrained_weight_path)
+                with open(optimizer_path, "wb") as f_w:
+                    pickle.dump(self._optim, f_w, pickle.HIGHEST_PROTOCOL)
 
                 gc.collect()
 
