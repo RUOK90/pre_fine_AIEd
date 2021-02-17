@@ -183,6 +183,7 @@ class Trainer:
                         chained_train_dataloader, ARGS.pretrain_update_steps
                     ):
                         pass
+                    gc.collect()
                     continue
                 elif n_eval == ARGS.pretrain_resume_n_eval:
                     # load pretrained model and optimizer
