@@ -114,6 +114,8 @@ class FineTuneTrainer:
                 self._dummy_model, pretrained_weight_path, False
             )
             self._optim = get_optimizer(self._model, ARGS.optim)
+
+            gc_n_evals = 50
             for n_eval in range(ARGS.finetune_max_num_evals):
                 print(f"\nCross Num: {cross_num:03d}, Finetuning n_eval: {n_eval:03d}")
                 self._cur_n_eval = n_eval
@@ -139,6 +141,9 @@ class FineTuneTrainer:
                     self._finetuned_weight_path = f"{ARGS.weight_path}/{ARGS.downstream_task}_{pretrain_n_eval}_{cross_num}.pt"
                     torch.save(self._model.state_dict(), self._finetuned_weight_path)
                     self._val_best_renewal = False
+
+                if (n_eval + 1) % gc_n_evals == 0:
+                    gc.collect()
 
             # test
             if do_test:
