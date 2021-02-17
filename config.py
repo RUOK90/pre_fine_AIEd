@@ -52,7 +52,7 @@ def get_arg_parser():
     base_args.add_argument("--debug_mode", type=str2bool, default=False)
     base_args.add_argument("--gpu", type=str, default="6")
     base_args.add_argument("--device", type=str)
-    base_args.add_argument("--num_workers", type=int, default=2)
+    base_args.add_argument("--num_workers", type=int, default=4)
 
     #################### Logging args ####################
     logging_args = parser.add_argument_group("Logging args")
@@ -113,7 +113,7 @@ def get_arg_parser():
     train_args.add_argument("--finetune_update_steps", type=int, default=None)
     train_args.add_argument("--finetune_patience", type=int, default=None)
 
-    train_args.add_argument("--pretrain_resume_n_eval", type=int, default=2)
+    train_args.add_argument("--pretrain_resume_n_eval", type=int, default=-1)
     train_args.add_argument(
         "--optim", type=str, choices=["scheduled", "noam"], default="noam"
     )
