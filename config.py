@@ -52,6 +52,7 @@ def get_arg_parser():
     base_args.add_argument("--debug_mode", type=str2bool, default=False)
     base_args.add_argument("--gpu", type=str, default="6")
     base_args.add_argument("--device", type=str)
+    base_args.add_argument("--server", type=str)
     base_args.add_argument("--num_workers", type=int, default=4)
 
     #################### Logging args ####################
