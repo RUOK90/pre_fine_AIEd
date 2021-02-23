@@ -166,7 +166,7 @@ def get_arg_parser():
         ],
         default="pretrain_only",
     )
-    train_args.add_argument("--pretrained_weight_n_eval", type=int, default=2)
+    train_args.add_argument("--pretrained_weight_n_eval", type=int, default=-1)
     train_args.add_argument(
         "--input_features",
         type=str,
