@@ -50,14 +50,14 @@ def get_arg_parser():
     base_args = parser.add_argument_group("Base args")
     base_args.add_argument("--run_script")
     base_args.add_argument("--debug_mode", type=str2bool, default=True)
-    base_args.add_argument("--gpu", type=str, default="6")
+    base_args.add_argument("--gpu", type=str, default="7")
     base_args.add_argument("--device", type=str)
     base_args.add_argument("--server", type=str)
     base_args.add_argument("--num_workers", type=int, default=4)
 
     #################### Logging args ####################
     logging_args = parser.add_argument_group("Logging args")
-    logging_args.add_argument("--use_wandb", type=str2bool, default=True)
+    logging_args.add_argument("--use_wandb", type=str2bool, default=False)
     logging_args.add_argument("--use_finetune_wandb", type=str2bool, default=False)
     logging_args.add_argument("--wandb_project", type=str, default="pre_fine_aied")
     logging_args.add_argument(
@@ -163,9 +163,15 @@ def get_arg_parser():
             "finetune_only_from_pretrained_weight",
             "both",
         ],
-        default="both",
+        default="finetune_only_from_pretrained_weight",
     )
     train_args.add_argument("--pretrained_weight_n_eval", type=int, default=-1)
+    train_args.add_argument(
+        "--finetune_val_pretrained_weight_n_evals",
+        type=int,
+        nargs="+",
+        default=[0, 4, 9, 14, 19, 24, 29, 34, 39],
+    )
     train_args.add_argument(
         "--input_features",
         type=str,

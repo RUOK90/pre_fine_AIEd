@@ -285,8 +285,7 @@ class Trainer:
         elif ARGS.train_mode == "finetune_only_from_pretrained_weight":
             if ARGS.pretrained_weight_n_eval == -1:
                 # only finetune from the whole pretrained weights
-                # for n_eval in range(ARGS.pretrain_max_num_evals):
-                for n_eval in [0, 4, 9, 14, 19, 24, 29, 34, 39]:
+                for n_eval in ARGS.finetune_val_pretrained_weight_n_evals:
                     print(f"\nPretraining n_eval: {n_eval:03d}")
                     pretrained_weight_path = f"{ARGS.weight_path}/{n_eval}.pt"
                     self._finetune_trainer._train(pretrained_weight_path, n_eval, False)
