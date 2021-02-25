@@ -121,12 +121,19 @@ def preprocess_inters(q_info_dic, inters):
 
     seq_size = len(list(cls_appended_all_features.values())[0])
 
+    # get additional random masks for DPA60
+    dis_label_masks = (
+        np.random.random_sample(seq_size) < ARGS.random_mask_ratio
+    )  # True: mask
+    padded_dis_label_masks = get_padded_masks(dis_label_masks)
+
     return {
         "unmasked_feature": padded_unmasked_features,
         "masked_feature": padded_masked_features,
         "label": padded_labels,
         "input_mask": padded_input_masks,
         "padding_mask": padding_masks,
+        "dis_padding_mask": padded_dis_label_masks,
         "seq_size": seq_size,
     }
 

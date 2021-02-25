@@ -49,7 +49,7 @@ def get_arg_parser():
     #################### Base args ####################
     base_args = parser.add_argument_group("Base args")
     base_args.add_argument("--run_script")
-    base_args.add_argument("--debug_mode", type=str2bool, default=False)
+    base_args.add_argument("--debug_mode", type=str2bool, default=True)
     base_args.add_argument("--gpu", type=str, default="6")
     base_args.add_argument("--device", type=str)
     base_args.add_argument("--server", type=str)
@@ -57,7 +57,7 @@ def get_arg_parser():
 
     #################### Logging args ####################
     logging_args = parser.add_argument_group("Logging args")
-    logging_args.add_argument("--use_wandb", type=str2bool, default=False)
+    logging_args.add_argument("--use_wandb", type=str2bool, default=True)
     logging_args.add_argument("--use_finetune_wandb", type=str2bool, default=False)
     logging_args.add_argument("--wandb_project", type=str, default="pre_fine_aied")
     logging_args.add_argument(
@@ -121,7 +121,6 @@ def get_arg_parser():
     train_args.add_argument("--lr", type=float, default=0.001)
     train_args.add_argument("--warmup_steps", type=int, default=4000)
     train_args.add_argument("--random_mask_ratio", type=float, default=0.6)
-    train_args.add_argument("--dis_lambda", type=int, default=1)
     train_args.add_argument("--aug_ratio", type=float, default=0.5)
     train_args.add_argument("--aug_sample_ratio", type=float, default=0.5)
     train_args.add_argument(
@@ -164,7 +163,7 @@ def get_arg_parser():
             "finetune_only_from_pretrained_weight",
             "both",
         ],
-        default="pretrain_only",
+        default="both",
     )
     train_args.add_argument("--pretrained_weight_n_eval", type=int, default=-1)
     train_args.add_argument(
@@ -266,6 +265,13 @@ def get_arg_parser():
     model_args.add_argument("--use_glu", type=str2bool, default=False)
     model_args.add_argument("--causal", type=str2bool, default=False)
     model_args.add_argument("--cross_attend", type=str2bool, default=False)
+
+    model_args.add_argument(
+        "--ablation",
+        type=str,
+        choices=["DPA", "AAM", "RAM", "DPA60", "AM", "AE"],
+        default="RAM",
+    )
 
     # # if model == "am":
     # model_args.add_argument("--num_layers", type=int, default=2)
@@ -385,11 +391,16 @@ def get_args():
         args.targets = args.masked_features
 
     # wandb setting
+    if args.ablation == "DPA":
+        args.wandb_name = ""
+    else:
+        args.wandb_name = f"{args.ablation}_"
+
     if args.train_mode == "finetune_only":
-        args.wandb_name = f"{args.max_seq_size}_{args.train_mode}_{args.score_loss}"
+        args.wandb_name += f"{args.max_seq_size}_{args.train_mode}_{args.score_loss}"
     else:
         # input_masked_target
-        args.wandb_name = f"{args.max_seq_size}_{args.random_mask_ratio}_"
+        args.wandb_name += f"{args.max_seq_size}_{args.random_mask_ratio}_"
         if (
             args.train_mode == "finetune_only_from_pretrained_weight"
             and args.pretrained_weight_n_eval == -1
@@ -435,16 +446,10 @@ def get_args():
         args.num_workers = 0
         args.num_cross_folds = 1
         # args.interaction_base_path = f"/private/datasets/magneto_2021-01-27/user_interactions_wo_lecture_debug.pkl"
-        args.interaction_base_path = (
-            f"/private/datasets/magneto_2021-01-27/user_interactions_wo_lecture.pkl"
-        )
         # args.pretrain_base_path = args.pretrain_base_path.rstrip(".pkl") + "_debug.pkl"
         # args.score_base_path = (
         #     f"/private/datasets/magneto_2021-01-27/user_score_idxs_debug.pkl"
         # )
-        args.score_base_path = (
-            f"/private/datasets/magneto_2021-01-27/user_score_idxs.pkl"
-        )
         args.pretrain_train_batch_size = 8
         args.pretrain_test_batch_size = 16
         args.pretrain_max_num_evals = 3

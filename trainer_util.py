@@ -74,10 +74,11 @@ def batch_to_device(batch):
                 elif name in Const.CONT_VARS:
                     batch[group_name][name] = feature.to(ARGS.device).float()
 
-        elif group_name == "input_mask":
-            batch[group_name] = batch[group_name].to(ARGS.device).bool()
-
-        elif group_name == "padding_mask":
+        elif (
+            group_name == "input_mask"
+            or group_name == "padding_mask"
+            or group_name == "dis_padding_mask"
+        ):
             batch[group_name] = batch[group_name].to(ARGS.device).bool()
 
         elif group_name == "seq_size":

@@ -69,50 +69,145 @@ class ElectraAIEdPretrainModel(nn.Module):
             gen_config.num_attention_heads = int(dis_config.num_attention_heads / 4)
 
         if ARGS.model == "electra-performer":
-            dis_config = ElectraConfig()
-            dis_config.axial_pos_embds = ARGS.axial_pos_embds
-            dis_config.axial_pos_shape = tuple(ARGS.axial_pos_shape)
-            dis_config.axial_pos_embds_dim = tuple(ARGS.axial_pos_embds_dim)
-            dis_config.axial_norm_std = 1.0
-            dis_config.embedding_size = ARGS.embedding_size
-            dis_config.hidden_size = ARGS.hidden_size
-            dis_config.feedforward_mult = ARGS.feedforward_mult
-            dis_config.num_hidden_layers = ARGS.num_hidden_layers
-            dis_config.num_attn_heads = ARGS.num_attn_heads
-            dis_config.hidden_dropout_prob = ARGS.hidden_dropout_prob
-            dis_config.attn_probs_dropout_prob = ARGS.attn_probs_dropout_prob
-            dis_config.num_random_features = ARGS.num_random_features
-            dis_config.feature_redraw_interval = ARGS.feature_redraw_interval
-            dis_config.use_generalized_attn = ARGS.use_generalized_attn
-            dis_config.use_scale_norm = ARGS.use_scale_norm
-            dis_config.use_rezero = ARGS.use_rezero
-            dis_config.use_glu = ARGS.use_glu
-            dis_config.causal = ARGS.causal
-            dis_config.cross_attend = ARGS.cross_attend
-            dis_config.pad_token_id = Const.PAD_VAL
-            dis_config.max_position_embeddings = ARGS.max_seq_size
+            if ARGS.ablation == "DPA" or ARGS.ablation == "DPA60":
+                dis_config = ElectraConfig()
+                dis_config.axial_pos_embds = ARGS.axial_pos_embds
+                dis_config.axial_pos_shape = tuple(ARGS.axial_pos_shape)
+                dis_config.axial_pos_embds_dim = tuple(ARGS.axial_pos_embds_dim)
+                dis_config.axial_norm_std = 1.0
+                dis_config.embedding_size = ARGS.embedding_size
+                dis_config.hidden_size = ARGS.hidden_size
+                dis_config.feedforward_mult = ARGS.feedforward_mult
+                dis_config.num_hidden_layers = ARGS.num_hidden_layers
+                dis_config.num_attn_heads = ARGS.num_attn_heads
+                dis_config.hidden_dropout_prob = ARGS.hidden_dropout_prob
+                dis_config.attn_probs_dropout_prob = ARGS.attn_probs_dropout_prob
+                dis_config.num_random_features = ARGS.num_random_features
+                dis_config.feature_redraw_interval = ARGS.feature_redraw_interval
+                dis_config.use_generalized_attn = ARGS.use_generalized_attn
+                dis_config.use_scale_norm = ARGS.use_scale_norm
+                dis_config.use_rezero = ARGS.use_rezero
+                dis_config.use_glu = ARGS.use_glu
+                dis_config.causal = ARGS.causal
+                dis_config.cross_attend = ARGS.cross_attend
+                dis_config.pad_token_id = Const.PAD_VAL
+                dis_config.max_position_embeddings = ARGS.max_seq_size
 
-            gen_config = copy.deepcopy(dis_config)
-            gen_config.hidden_size = int(dis_config.hidden_size / 4)
-            gen_config.num_attn_heads = int(dis_config.num_attn_heads / 4)
+                gen_config = copy.deepcopy(dis_config)
+                gen_config.hidden_size = int(dis_config.hidden_size / 4)
+                gen_config.num_attn_heads = int(dis_config.num_attn_heads / 4)
 
-        self.embeds = ElectraAIEdEmbeddings(dis_config)
-        self.gen_model = ElectraAIEdMaskedLM(gen_config)
-        self.dis_model = ElectraAIEdPreTraining(dis_config)
+                self.embeds = ElectraAIEdEmbeddings(dis_config)
+                self.gen_model = ElectraAIEdMaskedLM(gen_config)
+                self.dis_model = ElectraAIEdPreTraining(dis_config)
+
+            elif ARGS.ablation == "AM" or ARGS.ablation == "AE":
+                gen_config = ElectraConfig()
+                gen_config.axial_pos_embds = ARGS.axial_pos_embds
+                gen_config.axial_pos_shape = tuple(ARGS.axial_pos_shape)
+                gen_config.axial_pos_embds_dim = tuple(ARGS.axial_pos_embds_dim)
+                gen_config.axial_norm_std = 1.0
+                gen_config.embedding_size = ARGS.embedding_size
+                gen_config.hidden_size = ARGS.hidden_size
+                gen_config.feedforward_mult = ARGS.feedforward_mult
+                gen_config.num_hidden_layers = ARGS.num_hidden_layers
+                gen_config.num_attn_heads = ARGS.num_attn_heads
+                gen_config.hidden_dropout_prob = ARGS.hidden_dropout_prob
+                gen_config.attn_probs_dropout_prob = ARGS.attn_probs_dropout_prob
+                gen_config.num_random_features = ARGS.num_random_features
+                gen_config.feature_redraw_interval = ARGS.feature_redraw_interval
+                gen_config.use_generalized_attn = ARGS.use_generalized_attn
+                gen_config.use_scale_norm = ARGS.use_scale_norm
+                gen_config.use_rezero = ARGS.use_rezero
+                gen_config.use_glu = ARGS.use_glu
+                gen_config.causal = ARGS.causal
+                gen_config.cross_attend = ARGS.cross_attend
+                gen_config.pad_token_id = Const.PAD_VAL
+                gen_config.max_position_embeddings = ARGS.max_seq_size
+
+                self.embeds = ElectraAIEdEmbeddings(gen_config)
+                self.gen_model = ElectraAIEdMaskedLM(gen_config)
+
+            elif ARGS.ablation == "AAM" or ARGS.ablation == "RAM":
+                gen_large_config = ElectraConfig()
+                gen_large_config.axial_pos_embds = ARGS.axial_pos_embds
+                gen_large_config.axial_pos_shape = tuple(ARGS.axial_pos_shape)
+                gen_large_config.axial_pos_embds_dim = tuple(ARGS.axial_pos_embds_dim)
+                gen_large_config.axial_norm_std = 1.0
+                gen_large_config.embedding_size = ARGS.embedding_size
+                gen_large_config.hidden_size = ARGS.hidden_size
+                gen_large_config.feedforward_mult = ARGS.feedforward_mult
+                gen_large_config.num_hidden_layers = ARGS.num_hidden_layers
+                gen_large_config.num_attn_heads = ARGS.num_attn_heads
+                gen_large_config.hidden_dropout_prob = ARGS.hidden_dropout_prob
+                gen_large_config.attn_probs_dropout_prob = ARGS.attn_probs_dropout_prob
+                gen_large_config.num_random_features = ARGS.num_random_features
+                gen_large_config.feature_redraw_interval = ARGS.feature_redraw_interval
+                gen_large_config.use_generalized_attn = ARGS.use_generalized_attn
+                gen_large_config.use_scale_norm = ARGS.use_scale_norm
+                gen_large_config.use_rezero = ARGS.use_rezero
+                gen_large_config.use_glu = ARGS.use_glu
+                gen_large_config.causal = ARGS.causal
+                gen_large_config.cross_attend = ARGS.cross_attend
+                gen_large_config.pad_token_id = Const.PAD_VAL
+                gen_large_config.max_position_embeddings = ARGS.max_seq_size
+
+                gen_small_config = copy.deepcopy(gen_large_config)
+                gen_small_config.hidden_size = int(gen_large_config.hidden_size / 4)
+                gen_small_config.num_attn_heads = int(
+                    gen_large_config.num_attn_heads / 4
+                )
+
+                self.embeds = ElectraAIEdEmbeddings(gen_large_config)
+                self.gen_small_model = ElectraAIEdMaskedLM(gen_small_config)
+                self.gen_large_model = ElectraAIEdMaskedLM(gen_large_config)
 
     def forward(self, unmasked_features, masked_features, input_masks, padding_masks):
         attention_masks = (~padding_masks).long()
-        gen_embeds = self.embeds(masked_features)
-        gen_outputs = self.gen_model(
-            gen_embeds, attention_masks, self.embeds.feature_embeds
-        )
-        dis_inputs, dis_labels = get_dis_inputs_labels(
-            unmasked_features, input_masks, gen_outputs
-        )
-        dis_embeds = self.embeds(dis_inputs)
-        dis_outputs = self.dis_model(dis_embeds, attention_masks)
 
-        return gen_outputs, dis_outputs, dis_labels
+        if ARGS.ablation == "DPA" or ARGS.ablation == "DPA60":
+            gen_embeds = self.embeds(masked_features)
+            gen_outputs = self.gen_model(
+                gen_embeds, attention_masks, self.embeds.feature_embeds
+            )
+            dis_inputs, dis_labels = get_dis_inputs_labels(
+                unmasked_features, input_masks, gen_outputs
+            )
+            dis_embeds = self.embeds(dis_inputs)
+            dis_outputs = self.dis_model(dis_embeds, attention_masks)
+
+            return gen_outputs, None, dis_outputs, dis_labels
+
+        elif ARGS.ablation == "AM":
+            gen_embeds = self.embeds(masked_features)
+            gen_outputs = self.gen_model(
+                gen_embeds, attention_masks, self.embeds.feature_embeds
+            )
+
+            return gen_outputs, None, None, None
+
+        elif ARGS.ablation == "AE":
+            gen_embeds = self.embeds(unmasked_features)
+            gen_outputs = self.gen_model(
+                gen_embeds, attention_masks, self.embeds.feature_embeds
+            )
+
+            return gen_outputs, None, None, None
+
+        elif ARGS.ablation == "AAM" or ARGS.ablation == "RAM":
+            gen_small_embeds = self.embeds(masked_features)
+            gen_small_outputs = self.gen_small_model(
+                gen_small_embeds, attention_masks, self.embeds.feature_embeds
+            )
+            gen_large_inputs, dis_labels = get_dis_inputs_labels(
+                unmasked_features, input_masks, gen_small_outputs
+            )
+            gen_large_embeds = self.embeds(gen_large_inputs)
+            gen_large_outputs = self.gen_large_model(
+                gen_large_embeds, attention_masks, self.embeds.feature_embeds
+            )
+
+            return gen_small_outputs, gen_large_outputs, None, None
 
 
 class ElectraAIEdFinetuneModel(nn.Module):
@@ -190,13 +285,29 @@ class ElectraAIEdFinetuneModel(nn.Module):
             config.pad_token_id = Const.PAD_VAL
             config.max_position_embeddings = ARGS.max_seq_size
 
-        self.embeds = ElectraAIEdEmbeddings(config)
-        self.dis_model = ElectraAIEdSequenceClassification(config)
+            self.embeds = ElectraAIEdEmbeddings(config)
+
+            if ARGS.ablation == "DPA" or ARGS.ablation == "DPA60":
+                self.dis_model = ElectraAIEdSequenceClassification(config)
+
+            elif ARGS.ablation == "AM" or ARGS.ablation == "AE":
+                self.gen_model = ElectraAIEdSequenceClassification(config)
+
+            elif ARGS.ablation == "AAM" or ARGS.ablation == "RAM":
+                self.gen_large_model = ElectraAIEdSequenceClassification(config)
 
     def forward(self, unmasked_features, padding_masks):
         attention_masks = (~padding_masks).long()
         embeds = self.embeds(unmasked_features)
-        outputs = self.dis_model(embeds, attention_masks)
+
+        if ARGS.ablation == "DPA" or ARGS.ablation == "DPA60":
+            outputs = self.dis_model(embeds, attention_masks)
+
+        elif ARGS.ablation == "AM" or ARGS.ablation == "AE":
+            outputs = self.gen_model(embeds, attention_masks)
+
+        elif ARGS.ablation == "AAM" or ARGS.ablation == "RAM":
+            outputs = self.gen_large_model(embeds, attention_masks)
 
         return outputs
 

@@ -30,10 +30,22 @@ class Trainer:
         self._cur_n_eval = 0
 
     def _pretrain(self, dataloader, mode):
-        total_gen_target_cnt = 0
+        total_gen_small_target_cnt = 0
+        total_gen_large_target_cnt = 0
         total_dis_target_cnt = 0
-        # results for generator
-        batch_results = {
+
+        batch_results = {}
+        # results for small generator
+        batch_results["gen_small"] = {
+            target: {
+                "loss": [],
+                "n_corrects": 0,
+                "l1": [],
+            }
+            for target in ARGS.targets
+        }
+        # results for large generator
+        batch_results["gen_large"] = {
             target: {
                 "loss": [],
                 "n_corrects": 0,
@@ -52,47 +64,78 @@ class Trainer:
         gc_steps = 1000
         for step, batch in enumerate(tqdm(dataloader)):
             batch_to_device(batch)
-            gen_outputs, dis_outputs, dis_labels = self._pretrain_model(
+            (
+                gen_small_outputs,
+                gen_large_outputs,
+                dis_outputs,
+                dis_labels,
+            ) = self._pretrain_model(
                 batch["unmasked_feature"],
                 batch["masked_feature"],
                 batch["input_mask"],
                 batch["padding_mask"],
             )
-            total_gen_target_cnt += batch["input_mask"].sum().item()
-            gen_total_loss = 0
 
-            # for generator outputs
-            for target, (logit, output) in gen_outputs.items():
-                label = batch["label"][target].masked_select(batch["input_mask"])
-                output = output.masked_select(batch["input_mask"])
+            # for generator_small outputs
+            if ARGS.ablation == "AE":
+                total_gen_small_target_cnt += (~batch["padding_mask"]).sum().item()
+            else:
+                total_gen_small_target_cnt += batch["input_mask"].sum().item()
+            gen_small_total_loss = 0
+
+            for target, (logit, output) in gen_small_outputs.items():
+                if ARGS.ablation == "AE":
+                    label = batch["label"][target].masked_select(~batch["padding_mask"])
+                    output = output.masked_select(~batch["padding_mask"])
+                else:
+                    label = batch["label"][target].masked_select(batch["input_mask"])
+                    output = output.masked_select(batch["input_mask"])
+
                 if target in Const.CATE_VARS:
-                    logit = logit.masked_select(batch["input_mask"].unsqueeze(-1)).view(
-                        -1, logit.shape[-1]
-                    )
+                    if ARGS.ablation == "AE":
+                        logit = logit.masked_select(
+                            ~batch["padding_mask"].unsqueeze(-1)
+                        ).view(-1, logit.shape[-1])
+                    else:
+                        logit = logit.masked_select(
+                            batch["input_mask"].unsqueeze(-1)
+                        ).view(-1, logit.shape[-1])
                     loss = self._ce_loss(logit, label)
                 elif target in Const.CONT_VARS:
-                    logit = logit.masked_select(batch["input_mask"])
+                    if ARGS.ablation == "AE":
+                        logit = logit.masked_select(~batch["padding_mask"])
+                    else:
+                        logit = logit.masked_select(batch["input_mask"])
                     if ARGS.time_loss == "bce":
                         loss = self._bce_loss(logit, label)
                     elif ARGS.time_loss == "mse":
                         loss = ARGS.time_loss_lambda * self._mse_loss(output, label)
-                gen_total_loss += loss
-                batch_results[target]["loss"].append(loss.item())
+                gen_small_total_loss += loss
+                batch_results["gen_small"][target]["loss"].append(loss.item())
 
                 if target in Const.CATE_VARS:
-                    batch_results[target]["n_corrects"] += (
+                    batch_results["gen_small"][target]["n_corrects"] += (
                         (output == (label + 1)).sum().item()
                     )
                 elif target in Const.CONT_VARS:
                     l1 = self._l1_loss(output, label)
-                    batch_results[target]["l1"].extend(l1.detach().cpu().numpy())
+                    batch_results["gen_small"][target]["l1"].extend(
+                        l1.detach().cpu().numpy()
+                    )
 
             # for discriminator outputs
             if dis_outputs is not None:
-                total_dis_target_cnt += (~batch["padding_mask"]).sum().item()
-                label = dis_labels.masked_select(~batch["padding_mask"])
-                logit = dis_outputs[0].masked_select(~batch["padding_mask"])
-                output = dis_outputs[1].masked_select(~batch["padding_mask"])
+                if ARGS.ablation == "DPA":
+                    total_dis_target_cnt += (~batch["padding_mask"]).sum().item()
+                    label = dis_labels.masked_select(~batch["padding_mask"])
+                    logit = dis_outputs[0].masked_select(~batch["padding_mask"])
+                    output = dis_outputs[1].masked_select(~batch["padding_mask"])
+                elif ARGS.ablation == "DPA60":
+                    total_dis_target_cnt += (batch["dis_padding_mask"]).sum().item()
+                    label = dis_labels.masked_select(batch["dis_padding_mask"])
+                    logit = dis_outputs[0].masked_select(batch["dis_padding_mask"])
+                    output = dis_outputs[1].masked_select(batch["dis_padding_mask"])
+
                 dis_loss = self._bce_loss(logit, label)
                 batch_results["dis"]["loss"].append(dis_loss.item())
                 batch_results["dis"]["n_corrects"] += (
@@ -101,8 +144,65 @@ class Trainer:
                 batch_results["dis"]["output"].extend(output.detach().cpu().numpy())
                 batch_results["dis"]["label"].extend(label.detach().cpu().numpy())
 
+            # for generator_large outputs
+            if gen_large_outputs is not None:
+                if ARGS.ablation == "AAM":
+                    total_gen_large_target_cnt += (~batch["padding_mask"]).sum().item()
+                elif ARGS.ablation == "RAM":
+                    total_gen_large_target_cnt += batch["input_mask"].sum().item()
+                gen_large_total_loss = 0
+
+                for target, (logit, output) in gen_large_outputs.items():
+                    if ARGS.ablation == "AAM":
+                        label = batch["label"][target].masked_select(
+                            ~batch["padding_mask"]
+                        )
+                        output = output.masked_select(~batch["padding_mask"])
+                    elif ARGS.ablation == "RAM":
+                        label = batch["label"][target].masked_select(
+                            batch["input_mask"]
+                        )
+                        output = output.masked_select(batch["input_mask"])
+
+                    if target in Const.CATE_VARS:
+                        if ARGS.ablation == "AAM":
+                            logit = logit.masked_select(
+                                ~batch["padding_mask"].unsqueeze(-1)
+                            ).view(-1, logit.shape[-1])
+                        elif ARGS.ablation == "RAM":
+                            logit = logit.masked_select(
+                                batch["input_mask"].unsqueeze(-1)
+                            ).view(-1, logit.shape[-1])
+                        loss = self._ce_loss(logit, label)
+                    elif target in Const.CONT_VARS:
+                        if ARGS.ablation == "AAM":
+                            logit = logit.masked_select(~batch["padding_mask"])
+                        elif ARGS.ablation == "RAM":
+                            logit = logit.masked_select(batch["input_mask"])
+                        if ARGS.time_loss == "bce":
+                            loss = self._bce_loss(logit, label)
+                        elif ARGS.time_loss == "mse":
+                            loss = ARGS.time_loss_lambda * self._mse_loss(output, label)
+                    gen_large_total_loss += loss
+                    batch_results["gen_large"][target]["loss"].append(loss.item())
+
+                    if target in Const.CATE_VARS:
+                        batch_results["gen_large"][target]["n_corrects"] += (
+                            (output == (label + 1)).sum().item()
+                        )
+                    elif target in Const.CONT_VARS:
+                        l1 = self._l1_loss(output, label)
+                        batch_results["gen_large"][target]["l1"].extend(
+                            l1.detach().cpu().numpy()
+                        )
+
             if self._pretrain_model.training:
-                self._optim.update(gen_total_loss + ARGS.dis_lambda * dis_loss)
+                if dis_outputs is not None:
+                    self._optim.update(gen_small_total_loss + dis_loss)
+                elif gen_large_outputs is not None:
+                    self._optim.update(gen_small_total_loss + gen_large_total_loss)
+                else:
+                    self._optim.update(gen_small_total_loss)
 
             if ARGS.debug_mode and step == ARGS.pretrain_update_steps:
                 break
@@ -111,24 +211,27 @@ class Trainer:
                 gc.collect()
 
         # print and wandb output
-        # for generator outputs
+        # for generator_small outputs
         for target in ARGS.targets:
-            loss = np.mean(batch_results[target]["loss"])
-            print(f"{mode} {target} loss: {loss:.4f}")
+            loss = np.mean(batch_results["gen_small"][target]["loss"])
+            print(f"{mode} gen_small {target} loss: {loss:.4f}")
             if target in Const.CATE_VARS:
-                acc = batch_results[target]["n_corrects"] / total_gen_target_cnt
-                print(f"{mode} {target} acc: {acc:.4f}")
+                acc = (
+                    batch_results["gen_small"][target]["n_corrects"]
+                    / total_gen_small_target_cnt
+                )
+                print(f"{mode} gen_small {target} acc: {acc:.4f}")
             elif target in Const.CONT_VARS:
-                l1 = np.mean(batch_results[target]["l1"])
-                print(f"{mode} {target} l1: {l1:.4f}")
+                l1 = np.mean(batch_results["gen_small"][target]["l1"])
+                print(f"{mode} gen_small {target} l1: {l1:.4f}")
 
             if ARGS.use_wandb:
                 wandb_log_dict = {}
-                wandb_log_dict[f"{mode} {target} loss"] = loss
+                wandb_log_dict[f"{mode} gen_small {target} loss"] = loss
                 if target in Const.CATE_VARS:
-                    wandb_log_dict[f"{mode} {target} acc"] = acc
+                    wandb_log_dict[f"{mode} gen_small {target} acc"] = acc
                 elif target in Const.CONT_VARS:
-                    wandb_log_dict[f"{mode} {target} l1"] = l1
+                    wandb_log_dict[f"{mode} gen_small {target} l1"] = l1
                 wandb.log(wandb_log_dict, step=self._cur_n_eval)
 
         # for discriminator outputs
@@ -151,6 +254,30 @@ class Trainer:
                     batch_results["dis"]["label"]
                 )
                 wandb.log(wandb_log_dict, step=self._cur_n_eval)
+
+        # for generator_large outputs
+        if gen_large_outputs is not None:
+            for target in ARGS.targets:
+                loss = np.mean(batch_results["gen_large"][target]["loss"])
+                print(f"{mode} gen_large {target} loss: {loss:.4f}")
+                if target in Const.CATE_VARS:
+                    acc = (
+                        batch_results["gen_large"][target]["n_corrects"]
+                        / total_gen_large_target_cnt
+                    )
+                    print(f"{mode} gen_large {target} acc: {acc:.4f}")
+                elif target in Const.CONT_VARS:
+                    l1 = np.mean(batch_results["gen_large"][target]["l1"])
+                    print(f"{mode} gen_large {target} l1: {l1:.4f}")
+
+                if ARGS.use_wandb:
+                    wandb_log_dict = {}
+                    wandb_log_dict[f"{mode} gen_large {target} loss"] = loss
+                    if target in Const.CATE_VARS:
+                        wandb_log_dict[f"{mode} gen_large {target} acc"] = acc
+                    elif target in Const.CONT_VARS:
+                        wandb_log_dict[f"{mode} gen_large {target} l1"] = l1
+                    wandb.log(wandb_log_dict, step=self._cur_n_eval)
 
     def _train(self):
         if ARGS.train_mode == "finetune_only":
