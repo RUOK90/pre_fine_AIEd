@@ -81,7 +81,7 @@ def get_arg_parser():
     path_args.add_argument(
         "--pretrain_base_path",
         type=str,
-        default="/private/datasets/magneto_2021-01-27/user_interaction_windows",
+        default="/private/datasets/magneto_2021-01-27/user_interaction_windows_1023_128.pkl",
     )
     path_args.add_argument(
         "--score_base_path",
@@ -103,16 +103,16 @@ def get_arg_parser():
     # train_args.add_argument("--pretrain_update_steps", type=int, default=350)
 
     train_args.add_argument("--max_seq_size", type=int, default=1024)  # +1 for cls
-    train_args.add_argument("--pretrain_train_batch_size", type=int, default=None)
-    train_args.add_argument("--pretrain_test_batch_size", type=int, default=None)
-    train_args.add_argument("--pretrain_max_num_evals", type=int, default=None)
-    train_args.add_argument("--pretrain_update_steps", type=int, default=None)
+    train_args.add_argument("--pretrain_train_batch_size", type=int, default=64)
+    train_args.add_argument("--pretrain_test_batch_size", type=int, default=128)
+    train_args.add_argument("--pretrain_max_num_evals", type=int, default=40)
+    train_args.add_argument("--pretrain_update_steps", type=int, default=5000)
 
-    train_args.add_argument("--finetune_train_batch_size", type=int, default=None)
-    train_args.add_argument("--finetune_test_batch_size", type=int, default=None)
-    train_args.add_argument("--finetune_max_num_evals", type=int, default=None)
-    train_args.add_argument("--finetune_update_steps", type=int, default=None)
-    train_args.add_argument("--finetune_patience", type=int, default=None)
+    train_args.add_argument("--finetune_train_batch_size", type=int, default=64)
+    train_args.add_argument("--finetune_test_batch_size", type=int, default=128)
+    train_args.add_argument("--finetune_max_num_evals", type=int, default=500)
+    train_args.add_argument("--finetune_update_steps", type=int, default=10)
+    train_args.add_argument("--finetune_patience", type=int, default=30)
 
     train_args.add_argument("--pretrain_resume_n_eval", type=int, default=-1)
     train_args.add_argument(
@@ -332,44 +332,44 @@ def get_args():
     set_random_seed(args.random_seed)
 
     # settings
-    if args.max_seq_size == 1024:
-        args.pretrain_base_path += "_1023_128.pkl"
-        args.axial_pos_shape = [32, 32]
-        args.pretrain_train_batch_size = 64
-        args.pretrain_test_batch_size = 128
-        args.pretrain_max_num_evals = 40
-        args.pretrain_update_steps = 5000
-        args.finetune_train_batch_size = 64
-        args.finetune_test_batch_size = 128
-        args.finetune_max_num_evals = 500
-        args.finetune_update_steps = 10
-        args.finetune_patience = 30
-    elif args.max_seq_size == 2048:
-        args.axial_pos_shape = [32, 64]
-        args.finetune_train_batch_size = 32
-        args.finetune_test_batch_size = 64
-        args.finetune_max_num_evals = 500
-        args.finetune_update_steps = 10
-        args.finetune_patience = 30
-    elif args.max_seq_size == 4096:
-        args.axial_pos_shape = [64, 64]
-        args.finetune_train_batch_size = 16
-        args.finetune_test_batch_size = 32
-        args.finetune_max_num_evals = 500
-        args.finetune_update_steps = 20
-        args.finetune_patience = 30
-    elif args.max_seq_size == 8192:
-        args.pretrain_base_path += "_8191_1024.pkl"
-        args.axial_pos_shape = [64, 128]
-        args.pretrain_train_batch_size = 8
-        args.pretrain_test_batch_size = 16
-        args.pretrain_max_num_evals = 20
-        args.pretrain_update_steps = 5000
-        args.finetune_train_batch_size = 8
-        args.finetune_test_batch_size = 16
-        args.finetune_max_num_evals = 500
-        args.finetune_update_steps = 20
-        args.finetune_patience = 30
+    # if args.max_seq_size == 1024:
+    #     args.pretrain_base_path += "_1023_128.pkl"
+    #     args.axial_pos_shape = [32, 32]
+    #     args.pretrain_train_batch_size = 64
+    #     args.pretrain_test_batch_size = 128
+    #     args.pretrain_max_num_evals = 40
+    #     args.pretrain_update_steps = 5000
+    #     args.finetune_train_batch_size = 64
+    #     args.finetune_test_batch_size = 128
+    #     args.finetune_max_num_evals = 500
+    #     args.finetune_update_steps = 10
+    #     args.finetune_patience = 30
+    # elif args.max_seq_size == 2048:
+    #     args.axial_pos_shape = [32, 64]
+    #     args.finetune_train_batch_size = 32
+    #     args.finetune_test_batch_size = 64
+    #     args.finetune_max_num_evals = 500
+    #     args.finetune_update_steps = 10
+    #     args.finetune_patience = 30
+    # elif args.max_seq_size == 4096:
+    #     args.axial_pos_shape = [64, 64]
+    #     args.finetune_train_batch_size = 16
+    #     args.finetune_test_batch_size = 32
+    #     args.finetune_max_num_evals = 500
+    #     args.finetune_update_steps = 20
+    #     args.finetune_patience = 30
+    # elif args.max_seq_size == 8192:
+    #     args.pretrain_base_path += "_8191_1024.pkl"
+    #     args.axial_pos_shape = [64, 128]
+    #     args.pretrain_train_batch_size = 8
+    #     args.pretrain_test_batch_size = 16
+    #     args.pretrain_max_num_evals = 20
+    #     args.pretrain_update_steps = 5000
+    #     args.finetune_train_batch_size = 8
+    #     args.finetune_test_batch_size = 16
+    #     args.finetune_max_num_evals = 500
+    #     args.finetune_update_steps = 20
+    #     args.finetune_patience = 30
 
     # parse gpus
     if args.gpu is not None:
