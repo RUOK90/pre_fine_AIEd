@@ -270,7 +270,7 @@ def get_arg_parser():
         "--ablation",
         type=str,
         choices=["DPA", "AAM", "RAM", "DPA60", "AM", "AE"],
-        default="RAM",
+        default="DPA",
     )
 
     # # if model == "am":
