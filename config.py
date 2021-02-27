@@ -403,7 +403,7 @@ def get_args():
         args.wandb_name = f"{args.ablation}_"
 
     if args.train_mode == "finetune_only":
-        args.wandb_name += f"{args.max_seq_size}_{args.train_mode}_{args.score_loss}"
+        args.wandb_name += f"{args.max_seq_size}_fo_{args.model}"
     else:
         # input_masked_target
         args.wandb_name += f"{args.max_seq_size}_{args.random_mask_ratio}_"
