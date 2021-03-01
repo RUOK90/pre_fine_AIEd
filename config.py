@@ -403,7 +403,8 @@ def get_args():
         args.wandb_name = f"{args.ablation}_"
 
     if args.train_mode == "finetune_only":
-        args.wandb_name += f"{args.max_seq_size}_fo_{args.model}"
+        if args.model == "electra-performer":
+            args.wandb_name += f"{args.max_seq_size}_fo_{args.model}_sn{args.use_scale_norm}_rz{args.use_rezero}_nh{args.num_hidden_layers}"
     else:
         # input_masked_target
         args.wandb_name += f"{args.max_seq_size}_{args.random_mask_ratio}_"
