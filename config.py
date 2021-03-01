@@ -404,7 +404,7 @@ def get_args():
 
     if args.train_mode == "finetune_only":
         if args.model == "electra-performer":
-            args.wandb_name += f"{args.max_seq_size}_fo_{args.model}_sn{args.use_scale_norm}_rz{args.use_rezero}_nh{args.num_hidden_layers}"
+            args.wandb_name += f"{args.max_seq_size}_fo_{args.model}_sn{args.use_scale_norm}_rz{args.use_rezero}_opt{args.optim}_drop{args.hidden_dropout_prob}"
     else:
         # input_masked_target
         args.wandb_name += f"{args.max_seq_size}_{args.random_mask_ratio}_"
