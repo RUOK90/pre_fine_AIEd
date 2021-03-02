@@ -375,9 +375,16 @@ class ElectraAIEdEmbeddings(ReformerPreTrainedModel):
         self.LayerNorm = nn.LayerNorm(config.embedding_size)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
-        self.register_buffer(
-            "position_ids", torch.arange(config.max_position_embeddings).expand((1, -1))
-        )
+        if ARGS.model == "electra":
+            self.register_buffer(
+                "pos_ids", torch.arange(config.max_position_embeddings).expand((1, -1))
+            )
+        else:
+            self.register_buffer(
+                "position_ids",
+                torch.arange(config.max_position_embeddings).expand((1, -1)),
+            )
+
         self.position_embedding_type = getattr(
             config, "position_embedding_type", "absolute"
         )
@@ -387,7 +394,10 @@ class ElectraAIEdEmbeddings(ReformerPreTrainedModel):
     def forward(self, inputs):
         input_shape = inputs["qid"].shape
         seq_length = input_shape[1]
-        position_ids = self.position_ids[:, :seq_length]
+        if ARGS.model == "electra":
+            pos_ids = self.pos_ids[:, :seq_length]
+        else:
+            position_ids = self.position_ids[:, :seq_length]
 
         for name, feature in inputs.items():
             if name in Const.CONT_VARS:
@@ -398,7 +408,7 @@ class ElectraAIEdEmbeddings(ReformerPreTrainedModel):
             embeds += self.feature_embeds[name](feature)
 
         if ARGS.model == "electra":
-            embeds += self.pos_embeds(position_ids)
+            embeds += self.pos_embeds(pos_ids)
         else:
             embeds += self.position_embeds(position_ids)
 
