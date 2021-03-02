@@ -356,11 +356,20 @@ class ElectraAIEdEmbeddings(ReformerPreTrainedModel):
                 )
             elif feature in Const.CONT_VARS:
                 feature_embeds_dict[feature] = nn.Linear(1, config.embedding_size)
-        self.position_embeds = (
-            AxialPositionEmbeddings(config)
-            if ARGS.axial_pos_embds
-            else nn.Embedding(config.max_position_embeddings, config.embedding_size)
-        )
+
+        if ARGS.model == "electra":
+            self.pos_embeds = (
+                AxialPositionEmbeddings(config)
+                if ARGS.axial_pos_embds
+                else nn.Embedding(config.max_position_embeddings, config.embedding_size)
+            )
+        else:
+            self.position_embeds = (
+                AxialPositionEmbeddings(config)
+                if ARGS.axial_pos_embds
+                else nn.Embedding(config.max_position_embeddings, config.embedding_size)
+            )
+
         self.feature_embeds = torch.nn.ModuleDict(feature_embeds_dict)
 
         self.LayerNorm = nn.LayerNorm(config.embedding_size)
@@ -387,7 +396,12 @@ class ElectraAIEdEmbeddings(ReformerPreTrainedModel):
         embeds = 0
         for name, feature in inputs.items():
             embeds += self.feature_embeds[name](feature)
-        embeds += self.position_embeds(position_ids)
+
+        if ARGS.model == "electra":
+            embeds += self.pos_embeds(position_ids)
+        else:
+            embeds += self.position_embeds(position_ids)
+
         embeds = self.LayerNorm(embeds)
         embeds = self.dropout(embeds)
 
