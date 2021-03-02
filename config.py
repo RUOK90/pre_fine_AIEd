@@ -49,7 +49,7 @@ def get_arg_parser():
     #################### Base args ####################
     base_args = parser.add_argument_group("Base args")
     base_args.add_argument("--run_script")
-    base_args.add_argument("--debug_mode", type=str2bool, default=True)
+    base_args.add_argument("--debug_mode", type=str2bool, default=False)
     base_args.add_argument("--gpu", type=str, default="7")
     base_args.add_argument("--device", type=str)
     base_args.add_argument("--server", type=str)
@@ -116,7 +116,7 @@ def get_arg_parser():
 
     train_args.add_argument("--pretrain_resume_n_eval", type=int, default=-1)
     train_args.add_argument(
-        "--optim", type=str, choices=["scheduled", "noam"], default="noam"
+        "--optim", type=str, choices=["scheduled", "noam", "adam"], default="adam"
     )
     train_args.add_argument("--lr", type=float, default=0.001)
     train_args.add_argument("--warmup_steps", type=int, default=4000)
@@ -163,7 +163,7 @@ def get_arg_parser():
             "finetune_only_from_pretrained_weight",
             "both",
         ],
-        default="finetune_only_from_pretrained_weight",
+        default="finetune_only",
     )
     train_args.add_argument("--pretrained_weight_n_eval", type=int, default=-1)
     train_args.add_argument(
@@ -248,7 +248,15 @@ def get_arg_parser():
     model_args.add_argument(
         "--model",
         type=str,
-        choices=["am", "bert", "electra", "electra-reformer", "electra-performer"],
+        choices=[
+            "am",
+            "bert",
+            "electra",
+            "electra-reformer",
+            "electra-performer",
+            "mlp",
+            "bilstm",
+        ],
         default="electra-performer",
     )
     model_args.add_argument("--axial_pos_embds", type=str2bool, default=True)
@@ -377,6 +385,15 @@ def get_args():
     #     args.finetune_update_steps = 20
     #     args.finetune_patience = 30
 
+    if args.model == "electra":
+        args.max_seq_size = 512
+        args.axial_pos_shape = [16, 32]
+        args.finetune_train_batch_size = 64
+        args.finetune_test_batch_size = 128
+        args.finetune_max_num_evals = 500
+        args.finetune_update_steps = 10
+        args.finetune_patience = 30
+
     # parse gpus
     if args.gpu is not None:
         os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
@@ -397,56 +414,67 @@ def get_args():
         args.targets = args.masked_features
 
     # wandb setting
-    if args.ablation == "DPA":
-        args.wandb_name = ""
-    else:
-        args.wandb_name = f"{args.ablation}_"
+    ##### baseline wandb name #####
+    if args.model != "electra-performer":
+        args.wandb_name = args.model
+        if args.train_mode == "finetune_only":
+            args.wandb_name += "_fo"
+        elif args.train_mode == "finetune_only_from_pretrained_weight":
+            args.wandb_name += f"_{args.ablation}"
+        if args.model == "mlp" or args.model == "bilstm":
+            args.wandb_name += f"_{args.lr}"
 
-    if args.train_mode == "finetune_only":
-        if args.model == "electra-performer":
-            args.wandb_name += f"{args.max_seq_size}_fo_{args.model}_sn{args.use_scale_norm}_rz{args.use_rezero}_opt{args.optim}_drop{args.hidden_dropout_prob}"
     else:
-        # input_masked_target
-        args.wandb_name += f"{args.max_seq_size}_{args.random_mask_ratio}_"
-        if (
-            args.train_mode == "finetune_only_from_pretrained_weight"
-            and args.pretrained_weight_n_eval == -1
-        ):
-            args.wandb_name += "val_"
-        elif (
-            args.train_mode == "finetune_only_from_pretrained_weight"
-            and args.pretrained_weight_n_eval != -1
-        ):
-            args.wandb_name += "test_"
+        if args.ablation == "DPA":
+            args.wandb_name = ""
+        else:
+            args.wandb_name = f"{args.ablation}_"
 
-        # input
-        if "choice" in args.input_features:
-            args.wandb_name += "ch-"
-        if "is_correct" in args.input_features:
-            args.wandb_name += "ic-"
-        if "elapsed_time" in args.input_features:
-            args.wandb_name += "et-"
-        if "is_on_time" in args.input_features:
-            args.wandb_name += "it-"
-        if "lag_time" in args.input_features:
-            args.wandb_name += "lt-"
-        if "exp_time" in args.input_features:
-            args.wandb_name += "ext-"
-        args.wandb_name = args.wandb_name.rstrip("-") + "_"
-        # target
-        if "choice" in args.targets:
-            args.wandb_name += "ch-"
-        if "is_correct" in args.targets:
-            args.wandb_name += "ic-"
-        if "elapsed_time" in args.targets:
-            args.wandb_name += "et-"
-        if "is_on_time" in args.targets:
-            args.wandb_name += "it-"
-        if "lag_time" in args.targets:
-            args.wandb_name += "lt-"
-        if "exp_time" in args.targets:
-            args.wandb_name += "ext-"
-        args.wandb_name = args.wandb_name.rstrip("-")
+        if args.train_mode == "finetune_only":
+            if args.model == "electra-performer":
+                args.wandb_name += f"{args.max_seq_size}_fo_{args.model}_sn{args.use_scale_norm}_rz{args.use_rezero}_opt{args.optim}_drop{args.hidden_dropout_prob}"
+        else:
+            # input_masked_target
+            args.wandb_name += f"{args.max_seq_size}_{args.random_mask_ratio}_"
+            if (
+                args.train_mode == "finetune_only_from_pretrained_weight"
+                and args.pretrained_weight_n_eval == -1
+            ):
+                args.wandb_name += "val_"
+            elif (
+                args.train_mode == "finetune_only_from_pretrained_weight"
+                and args.pretrained_weight_n_eval != -1
+            ):
+                args.wandb_name += "test_"
+
+            # input
+            if "choice" in args.input_features:
+                args.wandb_name += "ch-"
+            if "is_correct" in args.input_features:
+                args.wandb_name += "ic-"
+            if "elapsed_time" in args.input_features:
+                args.wandb_name += "et-"
+            if "is_on_time" in args.input_features:
+                args.wandb_name += "it-"
+            if "lag_time" in args.input_features:
+                args.wandb_name += "lt-"
+            if "exp_time" in args.input_features:
+                args.wandb_name += "ext-"
+            args.wandb_name = args.wandb_name.rstrip("-") + "_"
+            # target
+            if "choice" in args.targets:
+                args.wandb_name += "ch-"
+            if "is_correct" in args.targets:
+                args.wandb_name += "ic-"
+            if "elapsed_time" in args.targets:
+                args.wandb_name += "et-"
+            if "is_on_time" in args.targets:
+                args.wandb_name += "it-"
+            if "lag_time" in args.targets:
+                args.wandb_name += "lt-"
+            if "exp_time" in args.targets:
+                args.wandb_name += "ext-"
+            args.wandb_name = args.wandb_name.rstrip("-")
 
     # debug
     if args.debug_mode:

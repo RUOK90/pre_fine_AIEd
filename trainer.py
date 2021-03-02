@@ -21,8 +21,8 @@ class Trainer:
         self._pretrain_model.to(ARGS.device)
         self._pretrain_dataloaders = pretrain_dataloaders
         self._finetune_trainer = finetune_trainer
-        self._optim = get_optimizer(pretrain_model, ARGS.optim)
-
+        if ARGS.train_mode == "pretrain_only" or ARGS.train_mode == "both":
+            self._optim = get_optimizer(pretrain_model, ARGS.optim)
         self._mse_loss = nn.MSELoss(reduction="mean")
         self._bce_loss = nn.BCEWithLogitsLoss(reduction="mean")
         self._ce_loss = nn.CrossEntropyLoss(reduction="mean")

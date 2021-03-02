@@ -5,6 +5,8 @@ import torch.nn.functional as F
 from transformers.models.electra.modeling_electra import *
 from models.modeling_reformer import *
 from models.performer_pytorch import *
+from models.mlp import *
+from models.bilstm import *
 from config import *
 
 
@@ -13,22 +15,7 @@ class ElectraAIEdPretrainModel(nn.Module):
         super(ElectraAIEdPretrainModel, self).__init__()
         # set config
         if ARGS.model == "electra":
-            dis_config = ElectraConfig()
-            dis_config.embedding_size = ARGS.embedding_size
-            dis_config.hidden_size = ARGS.hidden_size
-            dis_config.intermediate_size = ARGS.intermediate_size
-            dis_config.num_hidden_layers = ARGS.num_hidden_layers
-            dis_config.num_attention_heads = ARGS.num_attention_heads
-            dis_config.hidden_act = ARGS.hidden_act
-            dis_config.hidden_dropout_prob = ARGS.hidden_dropout_prob
-            dis_config.attention_probs_dropout_prob = ARGS.attention_probs_dropout_prob
-            dis_config.pad_token_id = Const.PAD_VAL
-            dis_config.max_position_embeddings = ARGS.max_seq_size
-
-            gen_config = copy.deepcopy(dis_config)
-            gen_config.hidden_size = int(dis_config.hidden_size / 4)
-            gen_config.intermediate_size = int(dis_config.intermediate_size / 4)
-            gen_config.num_attention_heads = int(dis_config.num_attention_heads / 4)
+            pass
 
         elif ARGS.model == "electra-reformer":
             dis_config = ReformerConfig()
@@ -216,16 +203,51 @@ class ElectraAIEdFinetuneModel(nn.Module):
         # set config
         if ARGS.model == "electra":
             config = ElectraConfig()
+            config.axial_pos_embds = ARGS.axial_pos_embds
+            config.axial_pos_shape = tuple(ARGS.axial_pos_shape)
+            config.axial_pos_embds_dim = tuple(ARGS.axial_pos_embds_dim)
+            config.axial_norm_std = 1.0
             config.embedding_size = ARGS.embedding_size
             config.hidden_size = ARGS.hidden_size
-            config.intermediate_size = ARGS.intermediate_size
+            config.intermediate_size = ARGS.hidden_size * ARGS.feedforward_mult
             config.num_hidden_layers = ARGS.num_hidden_layers
-            config.num_attention_heads = ARGS.num_attention_heads
-            config.hidden_act = ARGS.hidden_act
+            config.num_attention_heads = ARGS.num_attn_heads
             config.hidden_dropout_prob = ARGS.hidden_dropout_prob
-            config.attention_probs_dropout_prob = ARGS.attention_probs_dropout_prob
+            config.attention_probs_dropout_prob = ARGS.attn_probs_dropout_prob
             config.pad_token_id = Const.PAD_VAL
             config.max_position_embeddings = ARGS.max_seq_size
+
+            self.baseline = ElectraAIEdSequenceClassification(config)
+
+        elif ARGS.model == "mlp":
+            config = ElectraConfig()
+            config.axial_pos_embds = ARGS.axial_pos_embds
+            config.axial_pos_shape = tuple(ARGS.axial_pos_shape)
+            config.axial_pos_embds_dim = tuple(ARGS.axial_pos_embds_dim)
+            config.axial_norm_std = 1.0
+            config.embedding_size = ARGS.embedding_size
+            config.hidden_size = ARGS.hidden_size
+            config.num_hidden_layers = ARGS.num_hidden_layers
+            config.hidden_dropout_prob = ARGS.hidden_dropout_prob
+            config.pad_token_id = Const.PAD_VAL
+            config.max_position_embeddings = ARGS.max_seq_size
+
+            self.baseline = MLP(config)
+
+        elif ARGS.model == "bilstm":
+            config = ElectraConfig()
+            config.axial_pos_embds = ARGS.axial_pos_embds
+            config.axial_pos_shape = tuple(ARGS.axial_pos_shape)
+            config.axial_pos_embds_dim = tuple(ARGS.axial_pos_embds_dim)
+            config.axial_norm_std = 1.0
+            config.embedding_size = ARGS.embedding_size
+            config.hidden_size = ARGS.hidden_size
+            config.num_hidden_layers = ARGS.num_hidden_layers
+            config.hidden_dropout_prob = ARGS.hidden_dropout_prob
+            config.pad_token_id = Const.PAD_VAL
+            config.max_position_embeddings = ARGS.max_seq_size
+
+            self.baseline = BiLSTM(config)
 
         elif ARGS.model == "electra-reformer":
             config = ReformerConfig()
@@ -285,8 +307,6 @@ class ElectraAIEdFinetuneModel(nn.Module):
             config.pad_token_id = Const.PAD_VAL
             config.max_position_embeddings = ARGS.max_seq_size
 
-            self.embeds = ElectraAIEdEmbeddings(config)
-
             if ARGS.ablation == "DPA" or ARGS.ablation == "DPA60":
                 self.dis_model = ElectraAIEdSequenceClassification(config)
 
@@ -296,18 +316,29 @@ class ElectraAIEdFinetuneModel(nn.Module):
             elif ARGS.ablation == "AAM" or ARGS.ablation == "RAM":
                 self.gen_large_model = ElectraAIEdSequenceClassification(config)
 
+        self.embeds = ElectraAIEdEmbeddings(config)
+
     def forward(self, unmasked_features, padding_masks):
-        attention_masks = (~padding_masks).long()
-        embeds = self.embeds(unmasked_features)
+        if ARGS.model == "electra" or ARGS.model == "electra-performer":
+            attention_masks = (~padding_masks).long()
+            embeds = self.embeds(unmasked_features)
 
-        if ARGS.ablation == "DPA" or ARGS.ablation == "DPA60":
-            outputs = self.dis_model(embeds, attention_masks)
+            if ARGS.model == "electra":
+                outputs = self.baseline(embeds, attention_masks)
 
-        elif ARGS.ablation == "AM" or ARGS.ablation == "AE":
-            outputs = self.gen_model(embeds, attention_masks)
+            if ARGS.model == "electra-performer":
+                if ARGS.ablation == "DPA" or ARGS.ablation == "DPA60":
+                    outputs = self.dis_model(embeds, attention_masks)
 
-        elif ARGS.ablation == "AAM" or ARGS.ablation == "RAM":
-            outputs = self.gen_large_model(embeds, attention_masks)
+                elif ARGS.ablation == "AM" or ARGS.ablation == "AE":
+                    outputs = self.gen_model(embeds, attention_masks)
+
+                elif ARGS.ablation == "AAM" or ARGS.ablation == "RAM":
+                    outputs = self.gen_large_model(embeds, attention_masks)
+
+        elif ARGS.model == "mlp" or ARGS.model == "bilstm":
+            embeds = self.embeds(unmasked_features)
+            outputs = self.baseline(embeds)
 
         return outputs
 

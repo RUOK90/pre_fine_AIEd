@@ -59,6 +59,8 @@ def get_optimizer(model, optimizer):
             warmup=ARGS.warmup_steps,
             optimizer=adam,
         )
+    elif optimizer == "adam":
+        return Adam(params=model.parameters(), lr=ARGS.lr)
 
 
 def batch_to_device(batch):

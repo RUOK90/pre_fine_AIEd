@@ -40,6 +40,8 @@ if __name__ == "__main__":
         ARGS.model == "electra"
         or ARGS.model == "electra-reformer"
         or ARGS.model == "electra-performer"
+        or ARGS.model == "mlp"
+        or ARGS.model == "bilstm"
     ):
         pretrain_model = ElectraAIEdPretrainModel()
         finetune_model = ElectraAIEdFinetuneModel()

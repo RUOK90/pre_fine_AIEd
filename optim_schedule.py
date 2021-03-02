@@ -1,4 +1,5 @@
 import numpy as np
+import torch.optim as optim
 
 
 class ScheduledOpt:
@@ -78,3 +79,13 @@ class NoamOpt:
         self.zero_grad()
         loss.backward()
         self.step()
+
+
+class Adam:
+    def __init__(self, params, lr):
+        self.optimizer = optim.Adam(params=params, lr=lr)
+
+    def update(self, loss):
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
