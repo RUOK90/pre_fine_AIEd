@@ -116,7 +116,7 @@ def get_arg_parser():
 
     train_args.add_argument("--pretrain_resume_n_eval", type=int, default=-1)
     train_args.add_argument(
-        "--optim", type=str, choices=["scheduled", "noam", "adam"], default="adam"
+        "--optim", type=str, choices=["scheduled", "noam", "adam"], default="noam"
     )
     train_args.add_argument("--lr", type=float, default=0.001)
     train_args.add_argument("--warmup_steps", type=int, default=4000)
