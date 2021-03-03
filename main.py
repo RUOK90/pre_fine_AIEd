@@ -26,6 +26,7 @@ if __name__ == "__main__":
     elif (
         ARGS.train_mode == "finetune_only"
         or ARGS.train_mode == "finetune_only_from_pretrained_weight"
+        or ARGS.train_mode == "infer_only"
     ):
         if ARGS.downstream_task == "score":
             finetune_dataloaders = score_dataset.get_dataloaders(
@@ -48,4 +49,7 @@ if __name__ == "__main__":
 
     finetune_trainer = FineTuneTrainer(finetune_model, finetune_dataloaders)
     trainer = Trainer(pretrain_model, pretrain_dataloaders, finetune_trainer)
-    trainer._train()
+    if ARGS.train_mode == "infer_only":
+        finetune_trainer._inference()
+    else:
+        trainer._train()

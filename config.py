@@ -49,7 +49,7 @@ def get_arg_parser():
     #################### Base args ####################
     base_args = parser.add_argument_group("Base args")
     base_args.add_argument("--run_script")
-    base_args.add_argument("--debug_mode", type=str2bool, default=True)
+    base_args.add_argument("--debug_mode", type=str2bool, default=False)
     base_args.add_argument("--gpu", type=str, default="7")
     base_args.add_argument("--device", type=str)
     base_args.add_argument("--server", type=str)
@@ -163,8 +163,9 @@ def get_arg_parser():
             "finetune_only",
             "finetune_only_from_pretrained_weight",
             "both",
+            "infer_only",
         ],
-        default="finetune_only",
+        default="both",
     )
     train_args.add_argument("--pretrained_weight_n_eval", type=int, default=-1)
     train_args.add_argument(
@@ -191,7 +192,6 @@ def get_arg_parser():
             "qid",
             "part",
             "choice",
-            "is_correct",
             "elapsed_time",
             "lag_time",
             "exp_time",
@@ -211,10 +211,6 @@ def get_arg_parser():
         nargs="+",
         default=[
             "choice",
-            "is_correct",
-            "elapsed_time",
-            "lag_time",
-            "exp_time",
         ],
     )
     train_args.add_argument(
@@ -231,10 +227,6 @@ def get_arg_parser():
         nargs="+",
         default=[
             "choice",
-            "is_correct",
-            "elapsed_time",
-            "lag_time",
-            "exp_time",
         ],
     )
     train_args.add_argument(

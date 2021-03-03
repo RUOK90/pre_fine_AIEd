@@ -53,10 +53,26 @@ def get_dataloaders(q_info_dic, user_inters_dic, score_base_path):
             num_workers=ARGS.num_workers,
         )
 
+        all_dataset = ScoreDataSet(
+            q_info_dic,
+            user_inters_dic,
+            user_score_idxs[cross_num]["train"][:n_train]
+            + user_score_idxs[cross_num]["val"]
+            + user_score_idxs[cross_num]["test"],
+            "no_aug",
+        )
+        all_dataloader = data.DataLoader(
+            dataset=all_dataset,
+            batch_size=ARGS.finetune_test_batch_size,
+            shuffle=False,
+            num_workers=ARGS.num_workers,
+        )
+
         score_dataloaders[cross_num] = {
             "train": train_dataloader,
             "val": val_dataloader,
             "test": test_dataloader,
+            "all": all_dataloader,
         }
 
     return score_dataloaders

@@ -6,6 +6,7 @@ import torch.nn as nn
 import numpy as np
 from tqdm import tqdm
 from itertools import islice
+import pickle
 
 from trainer_util import *
 from config import *
@@ -193,3 +194,51 @@ class FineTuneTrainer:
                     f"mean_{ARGS.downstream_task}_test_perf"
                 ] = finetune_mean_test_perf
                 wandb.log(wandb_log_dict, step=0)
+
+    def _inference(self):
+        results = {}
+        for cross_num, dataloaders in self._dataloaders.items():
+            finetuned_weight_path = f"{ARGS.weight_path}/score_59_{cross_num}.pt"
+            self._dummy_model.load_state_dict(torch.load(finetuned_weight_path))
+            # val
+            with torch.no_grad():
+                self._dummy_model.eval()
+                batch_results = {
+                    "l1": [],
+                    "lc_l1": [],
+                    "rc_l1": [],
+                    "label": [],
+                    "lc_label": [],
+                    "rc_label": [],
+                }
+                for step, batch in enumerate(tqdm(dataloaders["all"])):
+                    batch_to_device(batch)
+                    outputs = self._dummy_model(
+                        batch["unmasked_feature"], batch["padding_mask"]
+                    )
+                    lc_logit, lc_output = outputs["lc"]
+                    rc_logit, rc_output = outputs["rc"]
+                    lc_pred = lc_output * Const.SCORE_SCALING_FACTOR
+                    rc_pred = rc_output * Const.SCORE_SCALING_FACTOR
+                    total_pred = lc_pred + rc_pred
+                    lc_l1 = self._l1_loss(lc_pred, batch["label"]["lc"])
+                    rc_l1 = self._l1_loss(rc_pred, batch["label"]["rc"])
+                    l1 = self._l1_loss(
+                        total_pred, batch["label"]["lc"] + batch["label"]["rc"]
+                    )
+                    batch_results["lc_l1"].extend(lc_l1.detach().cpu().numpy())
+                    batch_results["rc_l1"].extend(rc_l1.detach().cpu().numpy())
+                    batch_results["l1"].extend(l1.detach().cpu().numpy())
+                    label = batch["label"]["lc"] + batch["label"]["rc"]
+                    batch_results["lc_label"].extend(
+                        batch["label"]["lc"].detach().cpu().numpy()
+                    )
+                    batch_results["rc_label"].extend(
+                        batch["label"]["rc"].detach().cpu().numpy()
+                    )
+                    batch_results["label"].extend(label.detach().cpu().numpy())
+
+                results[cross_num] = batch_results
+
+        with open("/private/results/results.pkl", "wb") as f_w:
+            pickle.dump(results, f_w, pickle.HIGHEST_PROTOCOL)
