@@ -49,7 +49,7 @@ def get_arg_parser():
     #################### Base args ####################
     base_args = parser.add_argument_group("Base args")
     base_args.add_argument("--run_script")
-    base_args.add_argument("--debug_mode", type=str2bool, default=False)
+    base_args.add_argument("--debug_mode", type=str2bool, default=True)
     base_args.add_argument("--gpu", type=str, default="7")
     base_args.add_argument("--device", type=str)
     base_args.add_argument("--server", type=str)
@@ -114,6 +114,7 @@ def get_arg_parser():
     train_args.add_argument("--finetune_update_steps", type=int, default=10)
     train_args.add_argument("--finetune_patience", type=int, default=30)
 
+    train_args.add_argument("--finetune_train_ratio", type=float, default=1)
     train_args.add_argument("--pretrain_resume_n_eval", type=int, default=-1)
     train_args.add_argument(
         "--optim", type=str, choices=["scheduled", "noam", "adam"], default="noam"
@@ -432,7 +433,7 @@ def get_args():
 
         if args.train_mode == "finetune_only":
             if args.model == "electra-performer":
-                args.wandb_name += f"{args.max_seq_size}_fo_{args.model}_sn{args.use_scale_norm}_rz{args.use_rezero}_opt{args.optim}_drop{args.hidden_dropout_prob}"
+                args.wandb_name += f"{args.max_seq_size}_fo_{args.model}"
         else:
             # input_masked_target
             args.wandb_name += f"{args.max_seq_size}_{args.random_mask_ratio}_"
@@ -475,6 +476,8 @@ def get_args():
             if "exp_time" in args.targets:
                 args.wandb_name += "ext-"
             args.wandb_name = args.wandb_name.rstrip("-")
+        if args.finetune_train_ratio != 1:
+            args.wandb_name += f"_ftr_{args.finetune_train_ratio}"
 
     # debug
     if args.debug_mode:

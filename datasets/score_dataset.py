@@ -17,10 +17,13 @@ def get_dataloaders(q_info_dic, user_inters_dic, score_base_path):
             f"{cross_num} fold, # train: {len(user_score_idxs[cross_num]['train'])}, # val: {len(user_score_idxs[cross_num]['val'])}, # test: {len(user_score_idxs[cross_num]['test'])}"
         )
 
+        n_train = int(
+            len(user_score_idxs[cross_num]["train"]) * ARGS.finetune_train_ratio
+        )
         train_dataset = ScoreDataSet(
             q_info_dic,
             user_inters_dic,
-            user_score_idxs[cross_num]["train"],
+            user_score_idxs[cross_num]["train"][:n_train],
             ARGS.aug_mode,
         )
         train_dataloader = data.DataLoader(
