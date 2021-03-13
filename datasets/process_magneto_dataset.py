@@ -126,14 +126,19 @@ def save_score_idxs_dic(user_interactions_dic, scores, min_seq_len, n_folds, fil
                 if date_lc_rc_list[date_idx][0] < user_interactions[inter_idx][0]:
                     lc = date_lc_rc_list[date_idx][1]
                     rc = date_lc_rc_list[date_idx][2]
-                    if inter_idx >= min_seq_len:
-                        if prev_inter_idx == inter_idx:
-                            end_idx_lc_rc.pop()
-                        end_idx_lc_rc.append((inter_idx, lc, rc))
-                        prev_inter_idx = inter_idx
-
                     # if inter_idx >= min_seq_len:
+                    #     if prev_inter_idx == inter_idx:
+                    #         end_idx_lc_rc.pop()
                     #     end_idx_lc_rc.append((inter_idx, lc, rc))
+                    #     prev_inter_idx = inter_idx
+
+                    if inter_idx >= min_seq_len:
+                        correct_ratio = np.mean(
+                            user_interactions[:inter_idx]["is_correct"]
+                        )
+                        if lc + rc >= 200 and correct_ratio >= 0.1:
+                            # end_idx_lc_rc.append((inter_idx, lc, rc, correct_ratio))
+                            end_idx_lc_rc.append((inter_idx, lc, rc))
 
                     date_idx += 1
                     continue
@@ -141,6 +146,34 @@ def save_score_idxs_dic(user_interactions_dic, scores, min_seq_len, n_folds, fil
 
             if len(end_idx_lc_rc) != 0:
                 user_end_idx_lc_rc_dic[user] = end_idx_lc_rc
+
+    # # plotting
+    # len_cnt_dic = defaultdict(int)
+    # cr_score_list = []
+    # for user, end_idx_lc_rc in user_end_idx_lc_rc_dic.items():
+    #     for end_idx, lc, rc, cr in end_idx_lc_rc:
+    #         if lc + rc <= 200 or lc + rc > 990 or cr <= 0.1:
+    #             print(user, end_idx, lc + rc, cr)
+    #         len_cnt_dic[end_idx] += 1
+    #         cr_score_list.append((cr, lc + rc))
+    # len_cnt_list = list(len_cnt_dic.items())
+    # len_cnt_list.sort()
+
+    # # plot len-cnt
+    # x, y = zip(*len_cnt_list)
+    # plt.figure()
+    # plt.bar(x[:2000], y[:2000])
+    # plt.xlabel("seq len")
+    # plt.ylabel("cnt")
+    # plt.show()
+
+    # # plot cr-score
+    # x, y = zip(*cr_score_list)
+    # plt.figure()
+    # plt.scatter(x, y)
+    # plt.xlabel("correctness ratio")
+    # plt.ylabel("score")
+    # plt.show()
 
     # split user_end_idx_lc_rc_dic by n_folds and get train, val, test set
     user_score_idxs = []
@@ -201,10 +234,10 @@ def check_score_idxs(file_name):
     )
 
     len_cnt_dic = defaultdict(int)
-    for user, score_idxs in user_score_idxs:
-        for score_idx in score_idxs:
-            idx, _, _ = score_idx
-            len_cnt_dic[idx] += 1
+    for user, end_idx, lc, rc in user_score_idxs:
+        if lc + rc <= 200 or lc + rc >= 990:
+            print(user, end_idx, lc, rc)
+        len_cnt_dic[end_idx] += 1
     len_cnt_list = list(len_cnt_dic.items())
     len_cnt_list.sort()
 
@@ -213,7 +246,7 @@ def check_score_idxs(file_name):
     plt.bar(x[:2000], y[:2000])
     plt.xlabel("seq len")
     plt.ylabel("cnt")
-    plt.savefig("score_len_cnt.png")
+    # plt.show()
     pass
 
 
@@ -297,10 +330,10 @@ save_score_idxs_dic(filtered_user_interactions_dic, scores, 10, 5, "user_score_i
 #     filtered_user_interactions_dic, scores, 15, 8191, 2048, "user_interaction_windows"
 # )
 
-save_user_interaction_windows_dic(
-    filtered_user_interactions_dic, scores, 15, 1023, 128, "user_interaction_windows"
-)
-
-save_user_interaction_windows_dic(
-    filtered_user_interactions_dic, scores, 15, 8191, 1024, "user_interaction_windows"
-)
+# save_user_interaction_windows_dic(
+#     filtered_user_interactions_dic, scores, 15, 1023, 128, "user_interaction_windows"
+# )
+#
+# save_user_interaction_windows_dic(
+#     filtered_user_interactions_dic, scores, 15, 8191, 1024, "user_interaction_windows"
+# )
