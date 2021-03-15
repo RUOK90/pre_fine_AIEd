@@ -470,7 +470,7 @@ def get_args():
             args.wandb_name = args.wandb_name.rstrip("-")
         if args.finetune_train_ratio != 1:
             args.wandb_name += f"_ftr_{args.finetune_train_ratio}"
-        args.wandb_name += f"_{args.score_loss}"
+        args.wandb_name += f"_{args.aug_mode}_{args.aug_ratio}"
 
     # debug
     if args.debug_mode:

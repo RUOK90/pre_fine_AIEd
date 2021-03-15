@@ -164,7 +164,11 @@ def get_augmented_features(features, aug_mode):
         aug_mode == "both" and np.random.random_sample() < ARGS.aug_sample_ratio
     ):
         seq_size = len(list(features.values())[0])
-        augmented_seq_size = int(seq_size * ARGS.aug_ratio)
+        if ARGS.aug_ratio == -1:
+            aug_ratio = np.random.random_sample() * 0.8 + 0.1
+        else:
+            aug_ratio = ARGS.aug_ratio
+        augmented_seq_size = int(seq_size * aug_ratio)
         sampled_idxs = np.random.choice(seq_size, augmented_seq_size, replace=False)
         sorted_sampled_idxs = np.sort(sampled_idxs)
 
