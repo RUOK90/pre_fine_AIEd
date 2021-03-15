@@ -176,6 +176,11 @@ def get_augmented_features(features, aug_mode):
             name: feature[sorted_sampled_idxs][-ARGS.max_seq_size + 1 :]
             for name, feature in features.items()
         }
+    else:  # both but not aug
+        features = {
+            name: feature[-ARGS.max_seq_size + 1 :]
+            for name, feature in features.items()
+        }
 
     return features
 
